@@ -1,0 +1,310 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model announcements {
+  id            String               @id
+  title         String
+  message       String
+  created_by_id String
+  is_active     Boolean              @default(true)
+  expires_at    DateTime?
+  created_at    DateTime             @default(now())
+  updated_at    DateTime
+  priority      AnnouncementPriority @default(NORMAL)
+  users         users                @relation(fields: [created_by_id], references: [id])
+}
+
+model carriers {
+  id                   String                @id
+  name                 String                @unique
+  logo_url             String?
+  is_active            Boolean               @default(true)
+  created_at           DateTime              @default(now())
+  updated_at           DateTime
+  default_agent_rate   Float                 @default(0.70)
+  default_manager_rate Float                 @default(0.30)
+  insurance_types      InsuranceType[]       @default([LIFE])
+  commission_rates     commission_rates[]
+  onboarding_progress  onboarding_progress[]
+}
+
+model commission_rates {
+  id           String   @id
+  user_id      String
+  carrier_id   String
+  agent_rate   Float
+  manager_rate Float
+  created_at   DateTime @default(now())
+  updated_at   DateTime
+  carriers     carriers @relation(fields: [carrier_id], references: [id])
+  users        users    @relation(fields: [user_id], references: [id])
+
+  @@unique([user_id, carrier_id])
+}
+
+model commission_splits {
+  id                String         @id
+  deal_id           String
+  user_id           String
+  user_name         String
+  role_in_hierarchy CommissionRole
+  commission_amount Decimal        @db.Decimal(15, 2)
+  commission_level  Int
+  is_override       Boolean        @default(false)
+  created_at        DateTime       @default(now())
+  deals             deals          @relation(fields: [deal_id], references: [id], onDelete: Cascade)
+  users             users          @relation(fields: [user_id], references: [id])
+
+  @@index([deal_id])
+  @@index([user_id])
+}
+
+model deals {
+  id                            String              @id
+  agent_id                      String
+  client_name                   String
+  client_age                    Int?
+  client_state                  String?
+  policy_type                   PolicyType
+  carrier_name                  String
+  face_amount                   Decimal?            @db.Decimal(15, 2)
+  annual_premium                Decimal             @db.Decimal(15, 2)
+  commission_rate               Decimal             @db.Decimal(5, 2)
+  commission_amount             Decimal             @db.Decimal(15, 2)
+  application_date              DateTime            @db.Date
+  issue_date                    DateTime?           @db.Date
+  status                        DealStatus          @default(SUBMITTED)
+  notes                         String?
+  celebration_message           String?
+  tags                          String[]            @default([])
+  discord_posted                Boolean             @default(false)
+  discord_message_id            String?
+  discord_posted_at             DateTime?
+  is_first_deal                 Boolean             @default(false)
+  is_milestone                  Boolean             @default(false)
+  milestone_number              Int?
+  created_at                    DateTime            @default(now())
+  updated_at                    DateTime
+  agent_commission              Decimal?            @db.Decimal(15, 2)
+  fyc_rate                      Float               @default(1.0)
+  insurance_type                InsuranceType       @default(LIFE)
+  base_commission               Decimal?            @db.Decimal(15, 2)
+  is_big_sale                   Boolean             @default(false)
+  manager_id                    String?
+  manager_override              Decimal?            @db.Decimal(15, 2)
+  owner_id                      String?
+  owner_override                Decimal?            @db.Decimal(15, 2)
+  points_earned                 Int                 @default(0)
+  total_commission_pool         Decimal?            @db.Decimal(15, 2)
+  commission_splits             commission_splits[]
+  users_deals_agent_idTousers   users               @relation("deals_agent_idTousers", fields: [agent_id], references: [id])
+  users_deals_manager_idTousers users?              @relation("deals_manager_idTousers", fields: [manager_id], references: [id])
+  users_deals_owner_idTousers   users?              @relation("deals_owner_idTousers", fields: [owner_id], references: [id])
+
+  @@index([agent_id, created_at(sort: Desc)])
+  @@index([agent_id])
+  @@index([created_at(sort: Desc)])
+  @@index([manager_id])
+  @@index([owner_id])
+}
+
+model discord_settings {
+  id                    String   @id
+  sales_webhook_url     String?
+  sales_webhook_enabled Boolean  @default(true)
+  celebrate_first_sale  Boolean  @default(true)
+  celebrate_milestones  Boolean  @default(true)
+  celebrate_big_sales   Boolean  @default(true)
+  big_sale_threshold    Decimal  @default(2500) @db.Decimal(10, 2)
+  enable_daily_recap    Boolean  @default(true)
+  daily_recap_time      String   @default("22:00")
+  enable_morning_recap  Boolean  @default(true)
+  morning_recap_time    String   @default("09:00")
+  enable_weekly_reset   Boolean  @default(true)
+  milestone_numbers     Int[]    @default([10, 25, 50, 100, 250, 500])
+  created_at            DateTime @default(now())
+  updated_at            DateTime
+}
+
+model onboarding_progress {
+  id                 String               @id
+  user_id            String
+  carrier_id         String
+  contract_status    OnboardingItemStatus @default(NOT_STARTED)
+  contract_date      DateTime?
+  contract_notes     String?
+  signature_status   OnboardingItemStatus @default(NOT_STARTED)
+  signature_date     DateTime?
+  signature_notes    String?
+  bg_check_status    OnboardingItemStatus @default(NOT_STARTED)
+  bg_check_date      DateTime?
+  bg_check_notes     String?
+  license_status     OnboardingItemStatus @default(NOT_STARTED)
+  license_date       DateTime?
+  license_states     String[]             @default([])
+  license_notes      String?
+  eo_status          OnboardingItemStatus @default(NOT_STARTED)
+  eo_date            DateTime?
+  eo_expiry_date     DateTime?
+  eo_notes           String?
+  training_status    OnboardingItemStatus @default(NOT_STARTED)
+  training_date      DateTime?
+  training_notes     String?
+  ready_to_sell      Boolean              @default(false)
+  ready_to_sell_date DateTime?
+  progress_percent   Int                  @default(0)
+  created_at         DateTime             @default(now())
+  updated_at         DateTime
+  carriers           carriers             @relation(fields: [carrier_id], references: [id], onDelete: Cascade)
+  users              users                @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, carrier_id])
+  @@index([carrier_id])
+  @@index([user_id])
+}
+
+model teams {
+  id                                String   @id
+  name                              String   @unique
+  description                       String?
+  color                             String?
+  team_leader_id                    String?
+  created_at                        DateTime @default(now())
+  updated_at                        DateTime
+  emoji                             String?
+  monthly_deal_goal                 Int?     @default(50)
+  monthly_points                    Int      @default(0)
+  monthly_premium_goal              Decimal? @default(150000) @db.Decimal(12, 2)
+  total_points                      Int      @default(0)
+  weekly_points                     Int      @default(0)
+  users_teams_team_leader_idTousers users?   @relation("teams_team_leader_idTousers", fields: [team_leader_id], references: [id])
+  users_users_team_idToteams        users[]  @relation("users_team_idToteams")
+}
+
+model users {
+  id                                       String                @id
+  email                                    String                @unique
+  password_hash                            String
+  first_name                               String
+  last_name                                String
+  display_name                             String?
+  role                                     UserRole              @default(AGENT)
+  status                                   UserStatus            @default(ACTIVE)
+  profile_photo_url                        String?
+  phone_number                             String?
+  team_id                                  String?
+  upline_id                                String?
+  created_at                               DateTime              @default(now())
+  updated_at                               DateTime
+  profile_picture                          String?
+  manager_id                               String?
+  monthly_premium_goal                     Decimal?              @default(50000) @db.Decimal(12, 2)
+  weekly_deal_goal                         Int?                  @default(5)
+  agency_owner_id                          String?
+  commission_level                         Int                   @default(70)
+  announcements                            announcements[]
+  commission_rates                         commission_rates[]
+  commission_splits                        commission_splits[]
+  deals_deals_agent_idTousers              deals[]               @relation("deals_agent_idTousers")
+  deals_deals_manager_idTousers            deals[]               @relation("deals_manager_idTousers")
+  deals_deals_owner_idTousers              deals[]               @relation("deals_owner_idTousers")
+  onboarding_progress                      onboarding_progress[]
+  teams_teams_team_leader_idTousers        teams[]               @relation("teams_team_leader_idTousers")
+  users_users_agency_owner_idTousers       users?                @relation("users_agency_owner_idTousers", fields: [agency_owner_id], references: [id])
+  other_users_users_agency_owner_idTousers users[]               @relation("users_agency_owner_idTousers")
+  users_users_manager_idTousers            users?                @relation("users_manager_idTousers", fields: [manager_id], references: [id])
+  other_users_users_manager_idTousers      users[]               @relation("users_manager_idTousers")
+  teams_users_team_idToteams               teams?                @relation("users_team_idToteams", fields: [team_id], references: [id])
+  users_users_upline_idTousers             users?                @relation("users_upline_idTousers", fields: [upline_id], references: [id])
+  other_users_users_upline_idTousers       users[]               @relation("users_upline_idTousers")
+  weekly_rankings                          weekly_rankings[]
+}
+
+model weekly_rankings {
+  id                String   @id
+  agent_id          String
+  week_start_date   DateTime @db.Date
+  week_end_date     DateTime @db.Date
+  week_number       Int
+  year              Int
+  rank              Int
+  previous_rank     Int?
+  total_premium     Decimal  @db.Decimal(15, 2)
+  deal_count        Int
+  commission_earned Decimal  @db.Decimal(15, 2)
+  created_at        DateTime @default(now())
+  points_earned     Int      @default(0)
+  users             users    @relation(fields: [agent_id], references: [id])
+
+  @@unique([agent_id, week_start_date])
+  @@index([week_start_date, rank])
+}
+
+enum AnnouncementPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum CommissionRole {
+  AGENT
+  MANAGER
+  OWNER
+}
+
+enum DealStatus {
+  SUBMITTED
+  PENDING
+  APPROVED
+  ISSUED
+  IN_FORCE
+  LAPSED
+  CANCELLED
+}
+
+enum InsuranceType {
+  LIFE
+  HEALTH
+}
+
+enum OnboardingItemStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum PolicyType {
+  TERM
+  WHOLE_LIFE
+  UNIVERSAL_LIFE
+  IUL
+  VUL
+  FINAL_EXPENSE
+  ANNUITY
+  DISABILITY
+  LTC
+  CRITICAL_ILLNESS
+  OTHER
+}
+
+enum UserRole {
+  AGENT
+  TEAM_LEADER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
