@@ -20,19 +20,20 @@ model announcements {
 }
 
 model carriers {
-  id                   String                @id
-  name                 String                @unique
-  logo_url             String?
-  is_active            Boolean               @default(true)
-  created_at           DateTime              @default(now())
-  updated_at           DateTime
-  default_agent_rate   Float                 @default(0.70)
-  default_manager_rate Float                 @default(0.30)
-  insurance_types      InsuranceType[]       @default([LIFE])
-  life_fyc             Float                 @default(1.0)
-  health_fyc           Float                 @default(0.5)
-  commission_rates     commission_rates[]
-  onboarding_progress  onboarding_progress[]
+  id                          String                      @id
+  name                        String                      @unique
+  logo_url                    String?
+  is_active                   Boolean                     @default(true)
+  created_at                  DateTime                    @default(now())
+  updated_at                  DateTime
+  default_agent_rate          Float                       @default(0.70)
+  default_manager_rate        Float                       @default(0.30)
+  insurance_types             InsuranceType[]             @default([LIFE])
+  life_fyc                    Float                       @default(1.0)
+  health_fyc                  Float                       @default(0.5)
+  commission_rates            commission_rates[]
+  onboarding_progress         onboarding_progress[]
+  carrier_onboarding_statuses carrier_onboarding_status[]
 }
 
 model commission_rates {
@@ -170,6 +171,41 @@ model onboarding_progress {
   @@index([user_id])
 }
 
+model onboarding_tracker {
+  id                  String                        @id
+  user_id             String                        @unique
+  date_added          DateTime                      @default(now())
+  overall_status      OnboardingOverallStatus       @default(NOT_STARTED)
+  progress_percentage Int                           @default(0)
+  notes               String?
+  created_at          DateTime                      @default(now())
+  updated_at          DateTime
+  users               users                         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  carrier_statuses    carrier_onboarding_status[]
+
+  @@index([user_id])
+  @@index([overall_status])
+}
+
+model carrier_onboarding_status {
+  id                   String                  @id
+  onboarding_id        String
+  carrier_id           String
+  status               CarrierOnboardingStatus @default(NOT_STARTED)
+  date_submitted       DateTime?
+  date_approved        DateTime?
+  notes                String?
+  created_at           DateTime                @default(now())
+  updated_at           DateTime
+  onboarding_tracker   onboarding_tracker      @relation(fields: [onboarding_id], references: [id], onDelete: Cascade)
+  carriers             carriers                @relation(fields: [carrier_id], references: [id], onDelete: Cascade)
+
+  @@unique([onboarding_id, carrier_id])
+  @@index([onboarding_id])
+  @@index([carrier_id])
+  @@index([status])
+}
+
 model teams {
   id                                String   @id
   name                              String   @unique
@@ -216,6 +252,7 @@ model users {
   deals_deals_manager_idTousers            deals[]               @relation("deals_manager_idTousers")
   deals_deals_owner_idTousers              deals[]               @relation("deals_owner_idTousers")
   onboarding_progress                      onboarding_progress[]
+  onboarding_tracker                       onboarding_tracker?
   teams_teams_team_leader_idTousers        teams[]               @relation("teams_team_leader_idTousers")
   users_users_agency_owner_idTousers       users?                @relation("users_agency_owner_idTousers", fields: [agency_owner_id], references: [id])
   other_users_users_agency_owner_idTousers users[]               @relation("users_agency_owner_idTousers")
@@ -282,6 +319,19 @@ enum OnboardingItemStatus {
   APPROVED
   REJECTED
   EXPIRED
+}
+
+enum OnboardingOverallStatus {
+  NOT_STARTED
+  PENDING
+  READY
+}
+
+enum CarrierOnboardingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
 }
 
 enum PolicyType {

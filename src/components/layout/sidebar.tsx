@@ -15,6 +15,7 @@ import {
   Percent,
   Megaphone,
   Users2,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ const navigation = [
 const adminNavigation = [
   { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { name: "Commissions", href: "/admin/commissions", icon: Percent },
+  { name: "Onboarding", href: "/onboarding", icon: ClipboardList },
   { name: "User Management", href: "/admin/users", icon: Users },
   { name: "Teams", href: "/admin/teams", icon: Users2 },
   { name: "Carriers", href: "/admin/carriers", icon: Building2 },

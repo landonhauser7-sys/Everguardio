@@ -176,28 +176,28 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   const date = label ? format(new Date(label), "MMM d, yyyy") : "";
 
   return (
-    <div className="bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg p-3 min-w-[160px]">
-      <p className="text-sm font-medium text-foreground mb-2">{date}</p>
+    <div className="bg-gray-900 border-2 border-emerald-500 rounded-lg shadow-lg p-4 min-w-[180px]">
+      <p className="text-base font-semibold text-white mb-3">{date}</p>
       {payload.map((entry, index) => (
-        <div key={index} className="flex items-center justify-between gap-4">
+        <div key={index} className="flex items-center justify-between gap-6 mb-2">
           <div className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full"
               style={{ backgroundColor: entry.color }}
             />
-            <span className="text-sm text-muted-foreground capitalize">
+            <span className="text-sm text-gray-200 capitalize font-medium">
               {entry.dataKey}
             </span>
           </div>
-          <span className="text-sm font-mono font-semibold text-foreground">
+          <span className="text-base font-mono font-bold text-white">
             {formatCurrency(entry.value)}
           </span>
         </div>
       ))}
-      <div className="border-t mt-2 pt-2">
+      <div className="border-t border-gray-700 mt-3 pt-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Total</span>
-          <span className="text-sm font-mono font-bold text-foreground">
+          <span className="text-sm text-gray-300 font-medium">Total</span>
+          <span className="text-base font-mono font-bold text-emerald-400">
             {formatCurrency(payload.reduce((sum, p) => sum + p.value, 0))}
           </span>
         </div>
@@ -217,25 +217,25 @@ function TeamChartTooltip({ active, payload, label, teams }: {
   const date = label ? format(new Date(label), "MMM d, yyyy") : "";
 
   return (
-    <div className="bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg p-3 min-w-[180px]">
-      <p className="text-sm font-medium text-foreground mb-2">{date}</p>
+    <div className="bg-gray-900 border-2 border-purple-500 rounded-lg shadow-lg p-4 min-w-[200px]">
+      <p className="text-base font-semibold text-white mb-3">{date}</p>
       {payload
         .filter(entry => entry.value > 0)
         .sort((a, b) => b.value - a.value)
         .map((entry, index) => {
           const team = teams.find(t => t.id === entry.dataKey);
           return (
-            <div key={index} className="flex items-center justify-between gap-4">
+            <div key={index} className="flex items-center justify-between gap-6 mb-2">
               <div className="flex items-center gap-2">
                 <div
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: entry.color }}
                 />
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-gray-200 font-medium">
                   {team?.emoji} {team?.name || entry.dataKey}
                 </span>
               </div>
-              <span className="text-sm font-mono font-semibold text-foreground">
+              <span className="text-base font-mono font-bold text-white">
                 {formatCurrency(entry.value)}
               </span>
             </div>
@@ -546,36 +546,36 @@ export default function AnalyticsPage() {
                 >
                   <defs>
                     <linearGradient id="gradientLife" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10B981" stopOpacity={0.4} />
+                      <stop offset="0%" stopColor="#10B981" stopOpacity={0.5} />
                       <stop offset="100%" stopColor="#10B981" stopOpacity={0.05} />
                     </linearGradient>
                     <linearGradient id="gradientHealth" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.4} />
+                      <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.5} />
                       <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
-                    stroke="hsl(var(--border))"
-                    opacity={0.5}
+                    stroke="#4B5563"
+                    opacity={0.6}
                   />
                   <XAxis
                     dataKey="displayDate"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-                    tickMargin={10}
+                    tick={{ fill: "#E5E7EB", fontSize: 14, fontWeight: 500 }}
+                    tickMargin={12}
                     interval="preserveStartEnd"
                     minTickGap={40}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                    tick={{ fill: "#E5E7EB", fontSize: 14, fontWeight: 500 }}
                     tickFormatter={formatCompact}
-                    tickMargin={10}
-                    width={60}
+                    tickMargin={12}
+                    width={70}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   {showLife && (
@@ -583,10 +583,10 @@ export default function AnalyticsPage() {
                       type="monotone"
                       dataKey="life"
                       stroke="#10B981"
-                      strokeWidth={2.5}
+                      strokeWidth={3}
                       fill="url(#gradientLife)"
-                      dot={false}
-                      activeDot={{ r: 6, fill: "#10B981", stroke: "#fff", strokeWidth: 2 }}
+                      dot={{ fill: "#10B981", stroke: "#FFFFFF", strokeWidth: 2, r: 5 }}
+                      activeDot={{ r: 8, fill: "#10B981", stroke: "#FFFFFF", strokeWidth: 2 }}
                     />
                   )}
                   {showHealth && (
@@ -594,10 +594,10 @@ export default function AnalyticsPage() {
                       type="monotone"
                       dataKey="health"
                       stroke="#3B82F6"
-                      strokeWidth={2.5}
+                      strokeWidth={3}
                       fill="url(#gradientHealth)"
-                      dot={false}
-                      activeDot={{ r: 6, fill: "#3B82F6", stroke: "#fff", strokeWidth: 2 }}
+                      dot={{ fill: "#3B82F6", stroke: "#FFFFFF", strokeWidth: 2, r: 5 }}
+                      activeDot={{ r: 8, fill: "#3B82F6", stroke: "#FFFFFF", strokeWidth: 2 }}
                     />
                   )}
                 </AreaChart>
@@ -678,7 +678,7 @@ export default function AnalyticsPage() {
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: team.color }}
                     />
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium text-gray-200">
                       {team.emoji} {team.name}
                     </span>
                   </button>
@@ -694,25 +694,25 @@ export default function AnalyticsPage() {
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
-                      stroke="hsl(var(--border))"
-                      opacity={0.5}
+                      stroke="#4B5563"
+                      opacity={0.6}
                     />
                     <XAxis
                       dataKey="displayDate"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-                      tickMargin={10}
+                      tick={{ fill: "#E5E7EB", fontSize: 14, fontWeight: 500 }}
+                      tickMargin={12}
                       interval="preserveStartEnd"
                       minTickGap={40}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                      tick={{ fill: "#E5E7EB", fontSize: 14, fontWeight: 500 }}
                       tickFormatter={formatCompact}
-                      tickMargin={10}
-                      width={60}
+                      tickMargin={12}
+                      width={70}
                     />
                     <Tooltip content={<TeamChartTooltip teams={teamConfig} />} />
                     {teamConfig.map((team) => (
@@ -723,9 +723,9 @@ export default function AnalyticsPage() {
                           dataKey={team.id}
                           name={team.name}
                           stroke={team.color}
-                          strokeWidth={2.5}
-                          dot={false}
-                          activeDot={{ r: 6, fill: team.color, stroke: "#fff", strokeWidth: 2 }}
+                          strokeWidth={3}
+                          dot={{ fill: team.color, stroke: "#FFFFFF", strokeWidth: 2, r: 5 }}
+                          activeDot={{ r: 8, fill: team.color, stroke: "#FFFFFF", strokeWidth: 2 }}
                         />
                       )
                     ))}
@@ -865,26 +865,28 @@ export default function AnalyticsPage() {
                     layout="vertical"
                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#4B5563" />
                     <XAxis
                       type="number"
                       tickFormatter={formatCompact}
-                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                      tick={{ fill: "#E5E7EB", fontSize: 14, fontWeight: 500 }}
                     />
                     <YAxis
                       type="category"
                       dataKey="carrier"
                       width={100}
-                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                      tick={{ fill: "#E5E7EB", fontSize: 14, fontWeight: 500 }}
                     />
                     <Tooltip
                       formatter={(value) => formatCurrency(Number(value) || 0)}
-                      labelStyle={{ color: "hsl(var(--foreground))" }}
                       contentStyle={{
-                        backgroundColor: "hsl(var(--background))",
-                        border: "1px solid hsl(var(--border))",
+                        backgroundColor: "#1F2937",
+                        border: "2px solid #10B981",
                         borderRadius: "8px",
+                        color: "#FFFFFF",
+                        fontSize: "14px",
                       }}
+                      labelStyle={{ color: "#F9FAFB", fontWeight: 600 }}
                     />
                     <Bar dataKey="premium" radius={[0, 4, 4, 0]}>
                       {data.premiumByCarrier.map((entry, index) => (
@@ -933,16 +935,18 @@ export default function AnalyticsPage() {
                     <Tooltip
                       formatter={(value) => formatCurrency(Number(value) || 0)}
                       contentStyle={{
-                        backgroundColor: "hsl(var(--background))",
-                        border: "1px solid hsl(var(--border))",
+                        backgroundColor: "#1F2937",
+                        border: "2px solid #10B981",
                         borderRadius: "8px",
+                        color: "#FFFFFF",
+                        fontSize: "14px",
                       }}
                     />
                     <Legend
                       verticalAlign="bottom"
                       height={36}
                       formatter={(value) => (
-                        <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>
+                        <span style={{ color: "#E5E7EB", fontSize: "14px", fontWeight: 500 }}>{value}</span>
                       )}
                     />
                   </PieChart>
