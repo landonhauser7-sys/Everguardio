@@ -581,7 +581,7 @@ export default function OnboardingPage() {
                 </SelectTrigger>
                 <SelectContent className="bg-gray-800 border-gray-700">
                   {availableAgents.length === 0 ? (
-                    <SelectItem value="" disabled>
+                    <SelectItem value="no-agents" disabled>
                       All agents already added
                     </SelectItem>
                   ) : (

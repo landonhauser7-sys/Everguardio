@@ -220,8 +220,8 @@ export function ProductionChart({ data, isLoading, periodLabel = "the selected p
                   stroke="#10B981"
                   strokeWidth={3}
                   fill="url(#gradientLife)"
-                  dot={{ fill: "#10B981", stroke: "#FFFFFF", strokeWidth: 2, r: 5 }}
-                  activeDot={{ r: 8, fill: "#10B981", stroke: "#FFFFFF", strokeWidth: 2 }}
+                  dot={{ fill: "#10B981", r: 5 }}
+                  activeDot={{ r: 8, fill: "#10B981" }}
                 />
               )}
               {showHealth && (
@@ -231,8 +231,8 @@ export function ProductionChart({ data, isLoading, periodLabel = "the selected p
                   stroke="#3B82F6"
                   strokeWidth={3}
                   fill="url(#gradientHealth)"
-                  dot={{ fill: "#3B82F6", stroke: "#FFFFFF", strokeWidth: 2, r: 5 }}
-                  activeDot={{ r: 8, fill: "#3B82F6", stroke: "#FFFFFF", strokeWidth: 2 }}
+                  dot={{ fill: "#3B82F6", r: 5 }}
+                  activeDot={{ r: 8, fill: "#3B82F6" }}
                 />
               )}
             </AreaChart>

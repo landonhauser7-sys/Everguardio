@@ -58,7 +58,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
@@ -68,6 +68,33 @@ export const authOptions: NextAuthOptions = {
         token.teamName = user.teamName;
         token.profilePhotoUrl = user.profilePhotoUrl;
         token.commissionLevel = user.commissionLevel;
+      }
+
+      // Refresh user data when session is updated
+      if (trigger === "update" && token.id) {
+        const freshUser = await prisma.users.findUnique({
+          where: { id: token.id as string },
+          select: {
+            first_name: true,
+            last_name: true,
+            role: true,
+            profile_photo_url: true,
+            commission_level: true,
+            team_id: true,
+            teams_users_team_idToteams: {
+              select: { name: true },
+            },
+          },
+        });
+        if (freshUser) {
+          token.firstName = freshUser.first_name;
+          token.lastName = freshUser.last_name;
+          token.role = freshUser.role;
+          token.profilePhotoUrl = freshUser.profile_photo_url;
+          token.commissionLevel = freshUser.commission_level;
+          token.teamId = freshUser.team_id;
+          token.teamName = freshUser.teams_users_team_idToteams?.name || null;
+        }
       }
       return token;
     },

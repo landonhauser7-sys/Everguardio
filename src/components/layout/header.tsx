@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Sidebar } from "./sidebar";
 
 export function Header() {
@@ -36,6 +37,9 @@ export function Header() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
+          <VisuallyHidden>
+            <SheetTitle>Navigation Menu</SheetTitle>
+          </VisuallyHidden>
           <Sidebar />
         </SheetContent>
       </Sheet>
@@ -43,7 +47,7 @@ export function Header() {
       {/* Mobile Logo */}
       <Link href="/dashboard" className="flex items-center gap-2 lg:hidden">
         <Shield className="h-5 w-5 text-primary" />
-        <span className="font-bold">EVERGUARD IO</span>
+        <span className="font-bold">Everguard.io</span>
       </Link>
 
       <div className="flex flex-1 items-center justify-end gap-4">

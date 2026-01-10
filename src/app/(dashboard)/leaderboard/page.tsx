@@ -323,6 +323,112 @@ export default function LeaderboardPage() {
         </div>
       )}
 
+      {/* Top 3 Podium */}
+      {!isLoading && rankings.length >= 3 && (
+        <Card className="overflow-hidden p-0">
+          <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-6 py-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-yellow-500" />
+              Top Performers
+            </h3>
+          </div>
+          <CardContent className="pt-8 pb-6">
+            <div className="flex items-end justify-center gap-4 md:gap-8">
+              {/* 2nd Place */}
+              {rankings[1] && (
+                <div className="flex flex-col items-center">
+                  <div className="relative mb-3">
+                    <Avatar className="h-16 w-16 md:h-20 md:w-20 ring-4 ring-gray-400 shadow-lg">
+                      <AvatarImage src={rankings[1].profilePhotoUrl || undefined} alt={rankings[1].agentName} />
+                      <AvatarFallback className="text-lg md:text-xl bg-gray-100">
+                        {rankings[1].firstName?.[0]}{rankings[1].lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-2xl">🥈</div>
+                  </div>
+                  <div className="bg-gradient-to-t from-gray-400 to-gray-300 rounded-t-lg w-24 md:w-32 h-24 flex flex-col items-center justify-start pt-4 shadow-lg">
+                    <span className="text-3xl font-bold text-white drop-shadow">2</span>
+                  </div>
+                  <div className="text-center mt-3 max-w-[120px] md:max-w-[140px]">
+                    <p className="font-semibold truncate">{rankings[1].agentName}</p>
+                    {rankings[1].teamName && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {rankings[1].teamEmoji} {rankings[1].teamName}
+                      </p>
+                    )}
+                    <p className="font-mono font-bold text-gray-600 mt-1">
+                      {formatCurrency(rankings[1].totalPremium)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{rankings[1].dealCount} deals</p>
+                  </div>
+                </div>
+              )}
+
+              {/* 1st Place */}
+              {rankings[0] && (
+                <div className="flex flex-col items-center -mt-8">
+                  <div className="relative mb-3">
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-3xl animate-pulse">👑</div>
+                    <Avatar className="h-20 w-20 md:h-24 md:w-24 ring-4 ring-yellow-500 shadow-xl">
+                      <AvatarImage src={rankings[0].profilePhotoUrl || undefined} alt={rankings[0].agentName} />
+                      <AvatarFallback className="text-xl md:text-2xl bg-yellow-100">
+                        {rankings[0].firstName?.[0]}{rankings[0].lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-3xl">🥇</div>
+                  </div>
+                  <div className="bg-gradient-to-t from-yellow-500 to-yellow-400 rounded-t-lg w-28 md:w-36 h-32 flex flex-col items-center justify-start pt-4 shadow-xl">
+                    <span className="text-4xl font-bold text-white drop-shadow">1</span>
+                  </div>
+                  <div className="text-center mt-3 max-w-[130px] md:max-w-[160px]">
+                    <p className="font-bold text-lg truncate">{rankings[0].agentName}</p>
+                    {rankings[0].teamName && (
+                      <p className="text-sm text-muted-foreground truncate">
+                        {rankings[0].teamEmoji} {rankings[0].teamName}
+                      </p>
+                    )}
+                    <p className="font-mono font-bold text-yellow-600 text-lg mt-1">
+                      {formatCurrency(rankings[0].totalPremium)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{rankings[0].dealCount} deals</p>
+                  </div>
+                </div>
+              )}
+
+              {/* 3rd Place */}
+              {rankings[2] && (
+                <div className="flex flex-col items-center">
+                  <div className="relative mb-3">
+                    <Avatar className="h-14 w-14 md:h-18 md:w-18 ring-4 ring-amber-600 shadow-lg">
+                      <AvatarImage src={rankings[2].profilePhotoUrl || undefined} alt={rankings[2].agentName} />
+                      <AvatarFallback className="text-base md:text-lg bg-amber-100">
+                        {rankings[2].firstName?.[0]}{rankings[2].lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-2xl">🥉</div>
+                  </div>
+                  <div className="bg-gradient-to-t from-amber-700 to-amber-600 rounded-t-lg w-20 md:w-28 h-20 flex flex-col items-center justify-start pt-3 shadow-lg">
+                    <span className="text-2xl font-bold text-white drop-shadow">3</span>
+                  </div>
+                  <div className="text-center mt-3 max-w-[110px] md:max-w-[130px]">
+                    <p className="font-semibold text-sm truncate">{rankings[2].agentName}</p>
+                    {rankings[2].teamName && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {rankings[2].teamEmoji} {rankings[2].teamName}
+                      </p>
+                    )}
+                    <p className="font-mono font-bold text-amber-700 mt-1">
+                      {formatCurrency(rankings[2].totalPremium)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{rankings[2].dealCount} deals</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Leaderboard Table */}
       <Card>
         <CardHeader>

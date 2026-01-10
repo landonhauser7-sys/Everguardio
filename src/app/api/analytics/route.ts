@@ -72,6 +72,12 @@ export async function GET(request: Request) {
     const totalDeals = deals.length;
     const avgDealSize = totalDeals > 0 ? totalPremium / totalDeals : 0;
 
+    // Calculate commission breakdown (70/110/130 structure)
+    const totalCommissionPool = deals.reduce((sum, d) => sum + Number(d.total_commission_pool || 0), 0);
+    const agentCommissions = deals.reduce((sum, d) => sum + Number(d.agent_commission || 0), 0);
+    const managerOverrides = deals.reduce((sum, d) => sum + Number(d.manager_override || 0), 0);
+    const ownerOverrides = deals.reduce((sum, d) => sum + Number(d.owner_override || 0), 0);
+
     // Get unique agents with production
     const activeAgentIds = new Set(deals.map((d) => d.agent_id));
     const activeAgents = activeAgentIds.size;
@@ -274,6 +280,12 @@ export async function GET(request: Request) {
         totalDeals,
         avgDealSize,
         activeAgents,
+      },
+      commissionBreakdown: {
+        totalPool: totalCommissionPool,
+        agentCommissions,
+        managerOverrides,
+        ownerOverrides,
       },
       dailyProduction,
       premiumByCarrier: carrierWithPercentage,

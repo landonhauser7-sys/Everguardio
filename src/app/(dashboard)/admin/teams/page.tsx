@@ -435,14 +435,14 @@ export default function TeamsPage() {
               <div className="space-y-2">
                 <Label htmlFor="leader">Team Leader</Label>
                 <Select
-                  value={formData.team_leader_id}
-                  onValueChange={(v) => setFormData({ ...formData, team_leader_id: v })}
+                  value={formData.team_leader_id || "none"}
+                  onValueChange={(v) => setFormData({ ...formData, team_leader_id: v === "none" ? "" : v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a leader" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No leader</SelectItem>
+                    <SelectItem value="none">No leader</SelectItem>
                     {users.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.firstName} {user.lastName}
@@ -623,8 +623,8 @@ export default function TeamsPage() {
 
       {/* Team Detail Sheet */}
       <Sheet open={!!selectedTeam} onOpenChange={() => setSelectedTeam(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          {selectedTeam && (
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto" aria-describedby="team-sheet-description">
+          {selectedTeam ? (
             <>
               <SheetHeader>
                 <div className="flex items-center gap-3">
@@ -636,7 +636,7 @@ export default function TeamsPage() {
                   </span>
                   <div>
                     <SheetTitle>{selectedTeam.name}</SheetTitle>
-                    <SheetDescription>
+                    <SheetDescription id="team-sheet-description">
                       {selectedTeam.memberCount} members
                       {selectedTeam.leader &&
                         ` • Led by ${selectedTeam.leader.firstName} ${selectedTeam.leader.lastName}`}
@@ -785,6 +785,11 @@ export default function TeamsPage() {
                 </div>
               </div>
             </>
+          ) : (
+            <SheetHeader>
+              <SheetTitle>Team Details</SheetTitle>
+              <SheetDescription id="team-sheet-description">Loading team information...</SheetDescription>
+            </SheetHeader>
           )}
         </SheetContent>
       </Sheet>

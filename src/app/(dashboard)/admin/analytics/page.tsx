@@ -70,6 +70,12 @@ interface AnalyticsData {
     avgDealSize: number;
     activeAgents: number;
   };
+  commissionBreakdown: {
+    totalPool: number;
+    agentCommissions: number;
+    managerOverrides: number;
+    ownerOverrides: number;
+  };
   dailyProduction: Array<{
     date: string;
     life: number;
@@ -268,9 +274,8 @@ export default function AnalyticsPage() {
       if (response.ok) {
         const result = await response.json();
         setData(result);
-        // Initialize visible teams
-        const teamIds = result.teamPerformance?.teams?.map((t: TeamConfig) => t.id) || [];
-        setVisibleTeams(new Set(teamIds.length > 0 ? teamIds : MOCK_TEAMS.map(t => t.id)));
+        // Initialize visible teams with mock teams
+        setVisibleTeams(new Set(MOCK_TEAMS.map(t => t.id)));
       }
     } catch (error) {
       console.error("Error fetching analytics:", error);
@@ -303,25 +308,18 @@ export default function AnalyticsPage() {
     { name: "Health", value: data.lifeVsHealth.health.premium, color: "#3B82F6" },
   ].filter(d => d.value > 0) : [];
 
-  // Team chart data
-  const hasRealTeamData = data?.teamPerformance?.hasRealData;
-  const teamConfig = hasRealTeamData && data?.teamPerformance?.teams?.length > 0
-    ? data.teamPerformance.teams
-    : MOCK_TEAMS;
+  // Team chart data - always use mock data for demo
+  const teamConfig = MOCK_TEAMS;
 
-  const teamDailyData = hasRealTeamData && data?.teamPerformance?.dailyData?.length > 0
-    ? data.teamPerformance.dailyData.map(d => ({
-        ...d,
-        displayDate: format(new Date(d.date as string), "MMM d"),
-      }))
-    : generateMockTeamData(30).map(d => ({
-        ...d,
-        displayDate: format(new Date(d.date as string), "MMM d"),
-      }));
+  const teamDailyData = generateMockTeamData(30).map(d => ({
+    ...d,
+    displayDate: format(new Date(d.date as string), "MMM d"),
+  }));
 
-  const teamStats = hasRealTeamData && data?.teamPerformance?.stats?.length > 0
-    ? data.teamPerformance.stats
-    : MOCK_TEAM_STATS;
+  const teamStats = MOCK_TEAM_STATS;
+
+  // Flag for showing demo label
+  const showingMockData = true;
 
   const toggleTeamVisibility = (teamId: string) => {
     setVisibleTeams(prev => {
@@ -379,6 +377,73 @@ export default function AnalyticsPage() {
           customRange={datePreset === "custom" ? dateRange : undefined}
           onChange={handleDateRangeChange}
         />
+      </div>
+
+      {/* Commission Breakdown Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Commission Pool</CardTitle>
+            <DollarSign className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <div className="text-2xl font-bold font-mono text-purple-600">
+                {formatCurrency(data?.commissionBreakdown?.totalPool || 0)}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Agent Commissions (70%)</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <div className="text-2xl font-bold font-mono">
+                {formatCurrency(data?.commissionBreakdown?.agentCommissions || 0)}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Manager Overrides (40%)</CardTitle>
+            <TrendingUp className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <div className="text-2xl font-bold font-mono text-blue-600">
+                {formatCurrency(data?.commissionBreakdown?.managerOverrides || 0)}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-amber-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Owner Overrides (20%)</CardTitle>
+            <TrendingUp className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <div className="text-2xl font-bold font-mono text-amber-600">
+                {formatCurrency(data?.commissionBreakdown?.ownerOverrides || 0)}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Stats Cards */}
@@ -585,8 +650,8 @@ export default function AnalyticsPage() {
                       stroke="#10B981"
                       strokeWidth={3}
                       fill="url(#gradientLife)"
-                      dot={{ fill: "#10B981", stroke: "#FFFFFF", strokeWidth: 2, r: 5 }}
-                      activeDot={{ r: 8, fill: "#10B981", stroke: "#FFFFFF", strokeWidth: 2 }}
+                      dot={{ fill: "#10B981", r: 5 }}
+                      activeDot={{ r: 8, fill: "#10B981" }}
                     />
                   )}
                   {showHealth && (
@@ -596,8 +661,8 @@ export default function AnalyticsPage() {
                       stroke="#3B82F6"
                       strokeWidth={3}
                       fill="url(#gradientHealth)"
-                      dot={{ fill: "#3B82F6", stroke: "#FFFFFF", strokeWidth: 2, r: 5 }}
-                      activeDot={{ r: 8, fill: "#3B82F6", stroke: "#FFFFFF", strokeWidth: 2 }}
+                      dot={{ fill: "#3B82F6", r: 5 }}
+                      activeDot={{ r: 8, fill: "#3B82F6" }}
                     />
                   )}
                 </AreaChart>
@@ -617,9 +682,9 @@ export default function AnalyticsPage() {
                 Team Performance Comparison
               </CardTitle>
               <CardDescription>
-                {hasRealTeamData
-                  ? `Team performance over ${presetLabels[datePreset].toLowerCase()}`
-                  : "Example team data — Create teams to see real performance"
+                {showingMockData
+                  ? "Example team data — Create teams to see real performance"
+                  : `Team performance over ${presetLabels[datePreset].toLowerCase()}`
                 }
               </CardDescription>
             </div>
@@ -724,8 +789,8 @@ export default function AnalyticsPage() {
                           name={team.name}
                           stroke={team.color}
                           strokeWidth={3}
-                          dot={{ fill: team.color, stroke: "#FFFFFF", strokeWidth: 2, r: 5 }}
-                          activeDot={{ r: 8, fill: team.color, stroke: "#FFFFFF", strokeWidth: 2 }}
+                          dot={{ fill: team.color, r: 5 }}
+                          activeDot={{ r: 8, fill: team.color }}
                         />
                       )
                     ))}
@@ -744,9 +809,9 @@ export default function AnalyticsPage() {
             <div>
               <CardTitle>Team Performance Summary</CardTitle>
               <CardDescription>
-                {hasRealTeamData
-                  ? `Rankings for ${presetLabels[datePreset].toLowerCase()}`
-                  : "Example data — Create teams to see real stats"
+                {showingMockData
+                  ? "Example data — Create teams to see real stats"
+                  : `Rankings for ${presetLabels[datePreset].toLowerCase()}`
                 }
               </CardDescription>
             </div>

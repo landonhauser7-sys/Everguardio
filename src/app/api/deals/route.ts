@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
+import { sendDiscordSaleNotification } from "@/lib/discord";
 
 const dealSchema = z.object({
   clientName: z.string().min(1),
@@ -19,7 +20,7 @@ const dealSchema = z.object({
 
 // Commission level constants
 const AGENT_LEVEL = 70;
-const MANAGER_LEVEL = 110;
+const MANAGER_LEVEL = 90;
 const OWNER_LEVEL = 130;
 
 interface CommissionSplit {
@@ -344,6 +345,43 @@ export async function POST(request: Request) {
         })),
       });
     }
+
+    // Send Discord notification (don't await to not block response)
+    // Run async but don't fail the deal submission if it errors
+    (async () => {
+      try {
+        // Get agent's total deal count
+        const totalAgentDeals = await prisma.deals.count({
+          where: { agent_id: session.user.id },
+        });
+
+        // Count today's deals (all agents)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const totalDealsToday = await prisma.deals.count({
+          where: { created_at: { gte: today } },
+        });
+
+        await sendDiscordSaleNotification({
+          deal: {
+            id: dealId,
+            clientName: validatedData.clientName,
+            annualPremium: validatedData.annualPremium,
+            insuranceType: validatedData.insuranceType,
+            carrierName: validatedData.carrierName,
+          },
+          agent: {
+            id: user.id,
+            firstName: user.first_name,
+            lastName: user.last_name,
+          },
+          totalAgentDeals,
+          totalDealsToday,
+        });
+      } catch (error) {
+        console.error("Discord notification error:", error);
+      }
+    })();
 
     return NextResponse.json({
       id: deal.id,

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Save, Loader2, User, Lock } from "lucide-react";
+import { Save, Loader2, User, Lock, Camera, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,8 @@ export default function SettingsPage() {
   const { data: session, update: updateSession } = useSession();
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [profileData, setProfileData] = useState({
     firstName: session?.user?.firstName || "",
@@ -38,6 +40,60 @@ export default function SettingsPage() {
   const initials = session?.user
     ? `${session.user.firstName?.[0] || ""}${session.user.lastName?.[0] || ""}`
     : "U";
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingPhoto(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/profile/photo", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to upload photo");
+      }
+
+      await updateSession();
+      toast.success("Profile photo updated");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload photo");
+    } finally {
+      setIsUploadingPhoto(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
+  async function handleRemovePhoto() {
+    setIsUploadingPhoto(true);
+
+    try {
+      const response = await fetch("/api/profile/photo", {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to remove photo");
+      }
+
+      await updateSession();
+      toast.success("Profile photo removed");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove photo");
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  }
 
   async function handleProfileUpdate(e: React.FormEvent) {
     e.preventDefault();
@@ -129,15 +185,62 @@ export default function SettingsPage() {
         <CardContent>
           <form onSubmit={handleProfileUpdate} className="space-y-6">
             <div className="flex items-center gap-6">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={session?.user?.profilePhotoUrl || undefined} />
-                <AvatarFallback className="text-xl bg-primary text-primary-foreground">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div>
+              <div className="relative group">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={session?.user?.profilePhotoUrl || undefined} />
+                  <AvatarFallback className="text-xl bg-primary text-primary-foreground">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                {isUploadingPhoto && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                    <Loader2 className="h-6 w-6 animate-spin text-white" />
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingPhoto}
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <Camera className="h-6 w-6 text-white" />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+              </div>
+              <div className="flex-1">
                 <p className="font-medium">{session?.user?.name}</p>
                 <p className="text-sm text-muted-foreground">{session?.user?.email}</p>
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingPhoto}
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    Upload Photo
+                  </Button>
+                  {session?.user?.profilePhotoUrl && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRemovePhoto}
+                      disabled={isUploadingPhoto}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
