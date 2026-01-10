@@ -114,6 +114,34 @@ export async function GET(request: Request) {
       };
     }
 
+    // Production chart data - daily breakdown for last 30 days
+    const chartDeals = userRole === "ADMIN" ? allDeals : personalDeals;
+    const chartDataMap = new Map<string, { date: string; life: number; health: number }>();
+
+    // Initialize all days in the range
+    const now = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      chartDataMap.set(dateStr, { date: dateStr, life: 0, health: 0 });
+    }
+
+    // Aggregate deals by date
+    chartDeals.forEach(deal => {
+      const dateStr = new Date(deal.created_at).toISOString().split('T')[0];
+      const existing = chartDataMap.get(dateStr);
+      if (existing) {
+        if (deal.insurance_type === "LIFE") {
+          existing.life += Number(deal.annual_premium);
+        } else if (deal.insurance_type === "HEALTH") {
+          existing.health += Number(deal.annual_premium);
+        }
+      }
+    });
+
+    const productionChartData = Array.from(chartDataMap.values());
+
     return NextResponse.json({
       personal: personalStats,
       recentDeals: recentDeals.map(d => ({
@@ -135,6 +163,7 @@ export async function GET(request: Request) {
       totalAgents: performerMap.size,
       agency,
       role: userRole,
+      productionChartData,
     });
   } catch (error) {
     console.error("Dashboard error:", error);

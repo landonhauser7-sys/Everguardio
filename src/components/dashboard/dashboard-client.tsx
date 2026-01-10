@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { useState, useEffect, useCallback } from "react";
+import { format, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
 import {
   DollarSign,
   FileText,
@@ -17,6 +17,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { ProductionChart } from "./production-chart";
+import { DateRangeFilter, DateRangePreset, getPresetRange } from "./date-range-filter";
+import { AnnouncementsBanner } from "./announcements-banner";
 
 interface DashboardData {
   personal: {
@@ -62,6 +65,11 @@ interface DashboardData {
     healthPremium: number;
   } | null;
   role: string;
+  productionChartData: Array<{
+    date: string;
+    life: number;
+    health: number;
+  }>;
 }
 
 function formatCurrency(amount: number) {
@@ -86,40 +94,74 @@ function formatTimeAgo(dateString: string) {
   return format(date, "MMM d");
 }
 
+const presetLabels: Record<DateRangePreset, string> = {
+  today: "Today",
+  "7days": "Last 7 Days",
+  "30days": "Last 30 Days",
+  "90days": "Last 90 Days",
+  thisMonth: "This Month",
+  lastMonth: "Last Month",
+  ytd: "Year to Date",
+  custom: "Custom Range",
+};
+
 export function DashboardClient({ userName }: { userName: string }) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<DateRangePreset>("30days");
+  const [dateRange, setDateRange] = useState(() => getPresetRange("30days"));
+
+  const fetchDashboard = useCallback(async (range: { from: Date; to: Date }) => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        startDate: range.from.toISOString(),
+        endDate: range.to.toISOString(),
+      });
+      const response = await fetch(`/api/dashboard?${params}`);
+      if (response.ok) {
+        const result = await response.json();
+        setData(result);
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function fetchDashboard() {
-      try {
-        const response = await fetch("/api/dashboard");
-        if (response.ok) {
-          const result = await response.json();
-          setData(result);
-        }
-      } catch (error) {
-        console.error("Error fetching dashboard:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchDashboard();
-  }, []);
+    fetchDashboard(dateRange);
+  }, [fetchDashboard, dateRange]);
+
+  const handleDateRangeChange = (preset: DateRangePreset, range: { from: Date; to: Date }) => {
+    setDatePreset(preset);
+    setDateRange(range);
+  };
 
   const isAdmin = data?.role === "ADMIN";
 
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Welcome back, {userName}!
-        </h1>
-        <p className="text-muted-foreground">
-          {isAdmin ? "Agency Overview" : "Your Production Overview"}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Welcome back, {userName}!
+          </h1>
+          <p className="text-muted-foreground">
+            {isAdmin ? "Agency Overview" : "Your Production Overview"} — {presetLabels[datePreset]}
+          </p>
+        </div>
+        <DateRangeFilter
+          value={datePreset}
+          customRange={datePreset === "custom" ? dateRange : undefined}
+          onChange={handleDateRangeChange}
+        />
       </div>
+
+      {/* Announcements */}
+      <AnnouncementsBanner />
 
       {/* Admin Agency Stats */}
       {isAdmin && data?.agency && (
@@ -283,6 +325,13 @@ export function DashboardClient({ userName }: { userName: string }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Production Chart */}
+      <ProductionChart
+        data={data?.productionChartData || []}
+        isLoading={isLoading}
+        periodLabel={presetLabels[datePreset]}
+      />
 
       {/* Recent Activity & Top Performers */}
       <div className="grid gap-4 md:grid-cols-2">

@@ -11,6 +11,9 @@ import {
   Settings,
   BarChart3,
   Shield,
+  Building2,
+  Percent,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +29,9 @@ const navigation = [
 const adminNavigation = [
   { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { name: "User Management", href: "/admin/users", icon: Users },
+  { name: "Carriers", href: "/admin/carriers", icon: Building2 },
+  { name: "Commission Rates", href: "/admin/commission-rates", icon: Percent },
+  { name: "Announcements", href: "/admin/announcements", icon: Megaphone },
 ];
 
 export function Sidebar() {
