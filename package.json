@@ -1,4 +1,4 @@
-"scripts": {
+"build": "prisma generate && next build"scripts": {
   "dev": "next dev",
   "build": "prisma generate && next build",
   "start": "next start",
@@ -10,7 +10,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint"
   },
