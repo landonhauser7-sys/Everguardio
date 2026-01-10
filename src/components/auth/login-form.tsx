@@ -21,7 +21,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
@@ -38,13 +38,13 @@ export function LoginForm() {
       });
 
       if (result?.error) {
-        setError(result.error);
-      } else {
+        setError("Invalid email or password");
+      } else if (result?.ok) {
         router.push("/dashboard");
         router.refresh();
       }
     } catch {
-      setError("An unexpected error occurred");
+      setError("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +61,7 @@ export function LoginForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
               {error}

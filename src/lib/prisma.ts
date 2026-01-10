@@ -2,10 +2,6 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
-
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
 
@@ -13,7 +9,13 @@ function createPrismaClient() {
     throw new Error("DATABASE_URL is not defined");
   }
 
-  const pool = new Pool({ connectionString });
+  // Remove channel_binding parameter as it can cause issues
+  const cleanedUrl = connectionString.replace(/&?channel_binding=require/g, '');
+
+  const pool = new Pool({
+    connectionString: cleanedUrl,
+    max: 1, // Limit pool size to ensure fresh connections
+  });
   const adapter = new PrismaPg(pool);
 
   return new PrismaClient({
@@ -22,8 +24,7 @@ function createPrismaClient() {
   });
 }
 
-const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Don't cache in development to avoid stale connection issues
+const prisma = createPrismaClient();
 
 export default prisma;

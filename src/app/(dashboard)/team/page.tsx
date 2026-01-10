@@ -1,11 +1,7 @@
-import { auth } from "@/lib/auth";
 import { Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function TeamPage() {
-  const session = await auth();
-  const teamName = session?.user?.teamName;
-
   return (
     <div className="space-y-6">
       <div>
@@ -20,18 +16,12 @@ export default async function TeamPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{teamName || "Your Team"}</CardTitle>
+          <CardTitle>Your Team</CardTitle>
         </CardHeader>
         <CardContent>
-          {teamName ? (
-            <p className="text-muted-foreground">
-              You are a member of <strong>{teamName}</strong>. Team performance tracking coming soon.
-            </p>
-          ) : (
-            <p className="text-muted-foreground">
-              You are not currently assigned to a team. Contact your admin to be assigned.
-            </p>
-          )}
+          <p className="text-muted-foreground">
+            Team performance tracking coming soon.
+          </p>
         </CardContent>
       </Card>
     </div>
