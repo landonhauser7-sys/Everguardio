@@ -13,6 +13,8 @@ const createUserSchema = z.object({
   role: z.enum(["AGENT", "TEAM_LEADER", "ADMIN"]),
   teamId: z.string().optional(),
   commissionLevel: z.number().min(0).max(200).optional(),
+  managerId: z.string().optional(),
+  agencyOwnerId: z.string().optional(),
 });
 
 export async function GET() {
@@ -35,11 +37,27 @@ export async function GET() {
         status: true,
         profile_photo_url: true,
         commission_level: true,
+        manager_id: true,
+        agency_owner_id: true,
         created_at: true,
         teams_users_team_idToteams: {
           select: {
             id: true,
             name: true,
+          },
+        },
+        users_users_manager_idTousers: {
+          select: {
+            id: true,
+            first_name: true,
+            last_name: true,
+          },
+        },
+        users_users_agency_owner_idTousers: {
+          select: {
+            id: true,
+            first_name: true,
+            last_name: true,
           },
         },
       },
@@ -56,6 +74,16 @@ export async function GET() {
         status: u.status,
         profilePhotoUrl: u.profile_photo_url,
         commissionLevel: u.commission_level,
+        managerId: u.manager_id,
+        agencyOwnerId: u.agency_owner_id,
+        manager: u.users_users_manager_idTousers ? {
+          id: u.users_users_manager_idTousers.id,
+          name: `${u.users_users_manager_idTousers.first_name} ${u.users_users_manager_idTousers.last_name}`,
+        } : null,
+        agencyOwner: u.users_users_agency_owner_idTousers ? {
+          id: u.users_users_agency_owner_idTousers.id,
+          name: `${u.users_users_agency_owner_idTousers.first_name} ${u.users_users_agency_owner_idTousers.last_name}`,
+        } : null,
         createdAt: u.created_at,
         team: u.teams_users_team_idToteams,
       }))
@@ -98,6 +126,8 @@ export async function POST(request: NextRequest) {
         role: validatedData.role,
         team_id: validatedData.teamId,
         commission_level: validatedData.commissionLevel || 70,
+        manager_id: validatedData.managerId || null,
+        agency_owner_id: validatedData.agencyOwnerId || null,
         status: "ACTIVE",
         updated_at: new Date(),
       },

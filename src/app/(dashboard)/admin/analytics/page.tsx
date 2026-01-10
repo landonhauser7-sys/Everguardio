@@ -462,7 +462,7 @@ export default function AnalyticsPage() {
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                     />
                     <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value) => formatCurrency(Number(value) || 0)}
                       labelStyle={{ color: "hsl(var(--foreground))" }}
                       contentStyle={{
                         backgroundColor: "hsl(var(--background))",
@@ -507,7 +507,7 @@ export default function AnalyticsPage() {
                       outerRadius={100}
                       paddingAngle={5}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                       labelLine={false}
                     >
                       {pieData.map((entry, index) => (
@@ -515,7 +515,7 @@ export default function AnalyticsPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value) => formatCurrency(Number(value) || 0)}
                       contentStyle={{
                         backgroundColor: "hsl(var(--background))",
                         border: "1px solid hsl(var(--border))",

@@ -26,6 +26,8 @@ export async function GET(request: Request) {
         insurance_types: true,
         default_agent_rate: true,
         default_manager_rate: true,
+        life_fyc: true,
+        health_fyc: true,
         created_at: true,
         updated_at: true,
         _count: {
@@ -57,7 +59,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, logo_url, insurance_types, default_agent_rate, default_manager_rate } = body;
+    const { name, logo_url, insurance_types, default_agent_rate, default_manager_rate, life_fyc, health_fyc } = body;
 
     if (!name) {
       return NextResponse.json({ message: "Carrier name is required" }, { status: 400 });
@@ -76,6 +78,8 @@ export async function POST(request: Request) {
         insurance_types: insurance_types || ["LIFE"],
         default_agent_rate: default_agent_rate ?? 0.70,
         default_manager_rate: default_manager_rate ?? 0.30,
+        life_fyc: life_fyc ?? 1.0,
+        health_fyc: health_fyc ?? 0.5,
         updated_at: new Date(),
       },
     });

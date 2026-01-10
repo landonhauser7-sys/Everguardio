@@ -56,7 +56,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, logo_url, is_active, insurance_types, default_agent_rate, default_manager_rate } = body;
+    const { name, logo_url, is_active, insurance_types, default_agent_rate, default_manager_rate, life_fyc, health_fyc } = body;
 
     const existing = await prisma.carriers.findUnique({ where: { id } });
     if (!existing) {
@@ -79,6 +79,8 @@ export async function PATCH(
         ...(insurance_types !== undefined && { insurance_types }),
         ...(default_agent_rate !== undefined && { default_agent_rate }),
         ...(default_manager_rate !== undefined && { default_manager_rate }),
+        ...(life_fyc !== undefined && { life_fyc }),
+        ...(health_fyc !== undefined && { health_fyc }),
         updated_at: new Date(),
       },
     });

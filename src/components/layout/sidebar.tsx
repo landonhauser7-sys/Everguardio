@@ -29,10 +29,10 @@ const navigation = [
 
 const adminNavigation = [
   { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+  { name: "Commissions", href: "/admin/commissions", icon: Percent },
   { name: "User Management", href: "/admin/users", icon: Users },
   { name: "Teams", href: "/admin/teams", icon: Users2 },
   { name: "Carriers", href: "/admin/carriers", icon: Building2 },
-  { name: "Commission Rates", href: "/admin/commission-rates", icon: Percent },
   { name: "Announcements", href: "/admin/announcements", icon: Megaphone },
 ];
 

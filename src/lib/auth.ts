@@ -18,6 +18,11 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.users.findUnique({
           where: { email: credentials.email },
+          include: {
+            teams_users_team_idToteams: {
+              select: { id: true, name: true },
+            },
+          },
         });
 
         if (!user) {
@@ -41,7 +46,13 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: `${user.first_name} ${user.last_name}`,
+          firstName: user.first_name,
+          lastName: user.last_name,
           role: user.role,
+          teamId: user.team_id,
+          teamName: user.teams_users_team_idToteams?.name || null,
+          profilePhotoUrl: user.profile_photo_url,
+          commissionLevel: user.commission_level,
         };
       },
     }),
@@ -50,14 +61,26 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as { role: string }).role;
+        token.role = user.role;
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
+        token.teamId = user.teamId;
+        token.teamName = user.teamName;
+        token.profilePhotoUrl = user.profilePhotoUrl;
+        token.commissionLevel = user.commissionLevel;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user.id = token.id;
+        session.user.role = token.role;
+        session.user.firstName = token.firstName;
+        session.user.lastName = token.lastName;
+        session.user.teamId = token.teamId;
+        session.user.teamName = token.teamName;
+        session.user.profilePhotoUrl = token.profilePhotoUrl;
+        session.user.commissionLevel = token.commissionLevel;
       }
       return session;
     },

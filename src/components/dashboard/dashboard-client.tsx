@@ -31,6 +31,14 @@ interface DashboardData {
     lifePremium: number;
     healthPremium: number;
   };
+  commissionBreakdown: {
+    personalSales: number;
+    teamOverrides: number;
+    agentOverrides: number;
+    managerOverrides: number;
+    total: number;
+    commissionLevel: number;
+  };
   recentDeals: Array<{
     id: string;
     clientName: string;
@@ -57,6 +65,9 @@ interface DashboardData {
   agency: {
     premium: number;
     commission: number;
+    agentCommissions: number;
+    managerOverrides: number;
+    ownerOverrides: number;
     deals: number;
     activeAgents: number;
     lifeDeals: number;
@@ -271,11 +282,38 @@ export function DashboardClient({ userName }: { userName: string }) {
             ) : (
               <>
                 <div className="text-2xl font-bold font-mono">
-                  {formatCurrency(data?.personal.commission || 0)}
+                  {formatCurrency(data?.commissionBreakdown?.total || data?.personal.commission || 0)}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  From {data?.personal.deals || 0} deals
-                </p>
+                {data?.commissionBreakdown && data.commissionBreakdown.commissionLevel >= 110 ? (
+                  <div className="text-xs space-y-0.5 mt-1">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Personal ({data.commissionBreakdown.commissionLevel}%)</span>
+                      <span className="font-mono">{formatCurrency(data.commissionBreakdown.personalSales)}</span>
+                    </div>
+                    {data.commissionBreakdown.teamOverrides > 0 && (
+                      <div className="flex justify-between text-blue-600">
+                        <span>Team Overrides (40%)</span>
+                        <span className="font-mono">{formatCurrency(data.commissionBreakdown.teamOverrides)}</span>
+                      </div>
+                    )}
+                    {data.commissionBreakdown.agentOverrides > 0 && (
+                      <div className="flex justify-between text-purple-600">
+                        <span>Agent Overrides</span>
+                        <span className="font-mono">{formatCurrency(data.commissionBreakdown.agentOverrides)}</span>
+                      </div>
+                    )}
+                    {data.commissionBreakdown.managerOverrides > 0 && (
+                      <div className="flex justify-between text-purple-600">
+                        <span>Manager Overrides</span>
+                        <span className="font-mono">{formatCurrency(data.commissionBreakdown.managerOverrides)}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    From {data?.personal.deals || 0} deals @ {data?.commissionBreakdown?.commissionLevel || 70}%
+                  </p>
+                )}
               </>
             )}
           </CardContent>

@@ -29,6 +29,8 @@ model carriers {
   default_agent_rate   Float                 @default(0.70)
   default_manager_rate Float                 @default(0.30)
   insurance_types      InsuranceType[]       @default([LIFE])
+  life_fyc             Float                 @default(1.0)
+  health_fyc           Float                 @default(0.5)
   commission_rates     commission_rates[]
   onboarding_progress  onboarding_progress[]
 }

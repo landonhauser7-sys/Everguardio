@@ -3,6 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
+// Commission level constants
+const AGENT_LEVEL = 70;
+const MANAGER_LEVEL = 110;
+const OWNER_LEVEL = 130;
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -25,7 +30,14 @@ export async function GET(request: Request) {
     const userId = session.user.id;
     const userRole = session.user.role;
 
-    // Get personal stats
+    // Get current user's commission level
+    const currentUser = await prisma.users.findUnique({
+      where: { id: userId },
+      select: { commission_level: true },
+    });
+    const commissionLevel = currentUser?.commission_level || AGENT_LEVEL;
+
+    // Get personal deals (deals where agent_id = userId)
     const personalDeals = await prisma.deals.findMany({
       where: {
         agent_id: userId,
@@ -33,15 +45,89 @@ export async function GET(request: Request) {
       },
     });
 
+    // Calculate personal stats
     const personalStats = {
       premium: personalDeals.reduce((sum, d) => sum + Number(d.annual_premium), 0),
-      commission: personalDeals.reduce((sum, d) => sum + Number(d.commission_amount), 0),
+      commission: personalDeals.reduce((sum, d) => sum + Number(d.agent_commission || d.commission_amount), 0),
       deals: personalDeals.length,
       lifeDeals: personalDeals.filter(d => d.insurance_type === "LIFE").length,
       healthDeals: personalDeals.filter(d => d.insurance_type === "HEALTH").length,
       lifePremium: personalDeals.filter(d => d.insurance_type === "LIFE").reduce((sum, d) => sum + Number(d.annual_premium), 0),
       healthPremium: personalDeals.filter(d => d.insurance_type === "HEALTH").reduce((sum, d) => sum + Number(d.annual_premium), 0),
     };
+
+    // Initialize commission breakdown
+    let commissionBreakdown = {
+      personalSales: personalStats.commission,
+      teamOverrides: 0,
+      agentOverrides: 0,
+      managerOverrides: 0,
+      total: personalStats.commission,
+      commissionLevel,
+    };
+
+    // Get commission splits for this user (overrides they receive)
+    const userCommissionSplits = await prisma.commission_splits.findMany({
+      where: {
+        user_id: userId,
+        is_override: true,
+        deals: {
+          ...dateFilter,
+        },
+      },
+      include: {
+        deals: {
+          select: {
+            agent_id: true,
+            users_deals_agent_idTousers: {
+              select: {
+                first_name: true,
+                last_name: true,
+                commission_level: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Calculate override income based on commission level
+    if (commissionLevel === MANAGER_LEVEL) {
+      // Manager: show team overrides (40% from agents under them)
+      const teamOverrides = userCommissionSplits
+        .filter(s => s.role_in_hierarchy === "MANAGER")
+        .reduce((sum, s) => sum + Number(s.commission_amount), 0);
+
+      commissionBreakdown.teamOverrides = teamOverrides;
+      commissionBreakdown.total = personalStats.commission + teamOverrides;
+    } else if (commissionLevel === OWNER_LEVEL || userRole === "ADMIN") {
+      // Owner/Admin: show agent overrides and manager overrides separately
+      const ownerSplits = userCommissionSplits.filter(s => s.role_in_hierarchy === "OWNER");
+
+      // Separate overrides from agents with managers vs direct agents
+      let agentOverrides = 0;
+      let managerOverrides = 0;
+
+      for (const split of ownerSplits) {
+        const agentLevel = split.deals.users_deals_agent_idTousers.commission_level || AGENT_LEVEL;
+        if (agentLevel === AGENT_LEVEL) {
+          // This came from an agent with a manager (20% spread)
+          if (split.commission_level === 20) {
+            agentOverrides += Number(split.commission_amount);
+          } else {
+            // No manager, owner gets full 60% spread
+            agentOverrides += Number(split.commission_amount);
+          }
+        } else if (agentLevel === MANAGER_LEVEL) {
+          // This came from a manager's personal sale (20% spread)
+          managerOverrides += Number(split.commission_amount);
+        }
+      }
+
+      commissionBreakdown.agentOverrides = agentOverrides;
+      commissionBreakdown.managerOverrides = managerOverrides;
+      commissionBreakdown.total = personalStats.commission + agentOverrides + managerOverrides;
+    }
 
     // Get recent deals for activity feed
     const recentDeals = await prisma.deals.findMany({
@@ -102,9 +188,17 @@ export async function GET(request: Request) {
     // Agency stats for admin
     let agency = null;
     if (userRole === "ADMIN") {
+      const totalCommissionPool = allDeals.reduce((sum, d) => sum + Number(d.total_commission_pool || 0), 0);
+      const agentCommissions = allDeals.reduce((sum, d) => sum + Number(d.agent_commission || d.commission_amount), 0);
+      const managerOverrides = allDeals.reduce((sum, d) => sum + Number(d.manager_override || 0), 0);
+      const ownerOverrides = allDeals.reduce((sum, d) => sum + Number(d.owner_override || 0), 0);
+
       agency = {
         premium: allDeals.reduce((sum, d) => sum + Number(d.annual_premium), 0),
-        commission: allDeals.reduce((sum, d) => sum + Number(d.commission_amount), 0),
+        commission: totalCommissionPool,
+        agentCommissions,
+        managerOverrides,
+        ownerOverrides,
         deals: allDeals.length,
         activeAgents: performerMap.size,
         lifeDeals: allDeals.filter(d => d.insurance_type === "LIFE").length,
@@ -144,6 +238,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       personal: personalStats,
+      commissionBreakdown,
       recentDeals: recentDeals.map(d => ({
         id: d.id,
         clientName: d.client_name,
