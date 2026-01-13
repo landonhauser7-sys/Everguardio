@@ -1,10 +1,9 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import { PrismaNeon } from "@prisma/adapter-neon";
+import { neon } from "@neondatabase/serverless";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
-  pool: Pool | undefined;
 };
 
 function getPrismaClient() {
@@ -14,16 +13,8 @@ function getPrismaClient() {
     throw new Error("DATABASE_URL is not defined");
   }
 
-  // Reuse pool in serverless
-  if (!globalForPrisma.pool) {
-    globalForPrisma.pool = new Pool({
-      connectionString,
-      max: 1,
-      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
-    });
-  }
-
-  const adapter = new PrismaPg(globalForPrisma.pool);
+  const sql = neon(connectionString);
+  const adapter = new PrismaNeon(sql);
 
   return new PrismaClient({
     adapter,
