@@ -38,13 +38,16 @@ export function LoginForm() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        // Show actual error for debugging
+        setError(result.error === "CredentialsSignin"
+          ? "Invalid email or password"
+          : result.error);
       } else if (result?.ok) {
         router.push("/dashboard");
         router.refresh();
       }
-    } catch {
-      setError("An error occurred. Please try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
