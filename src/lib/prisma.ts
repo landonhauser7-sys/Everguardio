@@ -24,6 +24,11 @@ function getPrismaClient() {
     globalForPrisma.pool = new Pool({
       connectionString,
       max: 1,
+            ssl: {
+                      rejectUnauthorized: false,
+            },
+            connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 30000,
     });
   }
 
