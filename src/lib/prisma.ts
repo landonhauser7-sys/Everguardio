@@ -19,6 +19,7 @@ function getPrismaClient() {
     globalForPrisma.pool = new Pool({
       connectionString,
       max: 1,
+      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
     });
   }
 
