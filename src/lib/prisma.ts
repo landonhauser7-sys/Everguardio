@@ -1,13 +1,10 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaNeon } from "@prisma/adapter-neon";
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import ws from "ws";
-
-// Enable WebSocket for serverless environments
-neonConfig.webSocketConstructor = ws;
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  pool: Pool | undefined;
 };
 
 function getPrismaClient() {
@@ -17,9 +14,14 @@ function getPrismaClient() {
     throw new Error("DATABASE_URL is not defined");
   }
 
-  const pool = new Pool({ connectionString });
-  // @ts-expect-error - Type mismatch between adapter versions
-  const adapter = new PrismaNeon(pool);
+  if (!globalForPrisma.pool) {
+    globalForPrisma.pool = new Pool({
+      connectionString,
+      max: 1,
+    });
+  }
+
+  const adapter = new PrismaPg(globalForPrisma.pool);
 
   return new PrismaClient({
     adapter,
