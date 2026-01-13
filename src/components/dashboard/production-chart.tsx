@@ -15,6 +15,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrendingUp } from "lucide-react";
 
+// Helper to parse date strings without timezone shifting
+function parseLocalDate(dateString: string): Date {
+  const dateOnly = dateString.split("T")[0];
+  const [year, month, day] = dateOnly.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 interface ChartDataPoint {
   date: string;
   life: number;
@@ -39,10 +46,14 @@ function formatCurrency(value: number) {
   return `$${value}`;
 }
 
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; dataKey: string; color: string }>; label?: string }) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; dataKey: string; color: string; payload?: { date?: string } }>; label?: string }) {
   if (!active || !payload || !payload.length) return null;
 
-  const date = label ? format(new Date(label), "MMM d, yyyy") : "";
+  // Get the original date from the payload data if available, otherwise use label
+  const originalDate = payload[0]?.payload?.date;
+  const date = originalDate
+    ? format(parseLocalDate(originalDate), "MMM d, yyyy")
+    : label || "";
 
   return (
     <div className="bg-gray-900 border-2 border-emerald-500 rounded-lg shadow-lg p-4 min-w-[180px]">
@@ -81,7 +92,7 @@ export function ProductionChart({ data, isLoading, periodLabel = "the selected p
   // Format dates for display
   const chartData = data.map((d) => ({
     ...d,
-    displayDate: format(new Date(d.date), "MMM d"),
+    displayDate: format(parseLocalDate(d.date), "MMM d"),
   }));
 
   const showLife = filter === "both" || filter === "life";

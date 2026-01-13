@@ -262,6 +262,7 @@ model users {
   users_users_upline_idTousers             users?                @relation("users_upline_idTousers", fields: [upline_id], references: [id])
   other_users_users_upline_idTousers       users[]               @relation("users_upline_idTousers")
   weekly_rankings                          weekly_rankings[]
+  calendar_events                          calendar_events[]
 }
 
 model weekly_rankings {
@@ -359,4 +360,44 @@ enum UserStatus {
   INACTIVE
   ON_LEAVE
   TERMINATED
+}
+
+model calendar_events {
+  id              String        @id
+  title           String
+  description     String?
+  start           DateTime
+  end             DateTime
+  location        String?
+  type            CalendarEventType @default(OTHER)
+  all_day         Boolean       @default(false)
+  hangout_link    String?
+  google_event_id String?       @unique
+  created_by_id   String?
+  created_at      DateTime      @default(now())
+  updated_at      DateTime
+  users           users?        @relation(fields: [created_by_id], references: [id])
+
+  @@index([start, end])
+  @@index([created_by_id])
+}
+
+model calendar_config {
+  id                    String    @id
+  google_calendar_id    String?
+  google_access_token   String?
+  google_refresh_token  String?
+  google_token_expiry   DateTime?
+  is_connected          Boolean   @default(false)
+  last_synced           DateTime?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime
+}
+
+enum CalendarEventType {
+  TRAINING
+  MEETING
+  ANNOUNCEMENT
+  DEADLINE
+  OTHER
 }

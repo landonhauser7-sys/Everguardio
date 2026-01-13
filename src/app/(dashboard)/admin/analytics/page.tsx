@@ -2,6 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
+
+// Helper to parse date strings without timezone shifting
+function parseLocalDate(dateString: string): Date {
+  const dateOnly = dateString.split("T")[0];
+  const [year, month, day] = dateOnly.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
 import {
   BarChart3,
   DollarSign,
@@ -176,10 +183,14 @@ const presetLabels: Record<DateRangePreset, string> = {
   custom: "Custom Range",
 };
 
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; dataKey: string; color: string }>; label?: string }) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; dataKey: string; color: string; payload?: { date?: string } }>; label?: string }) {
   if (!active || !payload || !payload.length) return null;
 
-  const date = label ? format(new Date(label), "MMM d, yyyy") : "";
+  // Get the original date from the payload data if available, otherwise use label
+  const originalDate = payload[0]?.payload?.date;
+  const date = originalDate
+    ? format(parseLocalDate(originalDate), "MMM d, yyyy")
+    : label || "";
 
   return (
     <div className="bg-gray-900 border-2 border-emerald-500 rounded-lg shadow-lg p-4 min-w-[180px]">
@@ -214,13 +225,17 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 
 function TeamChartTooltip({ active, payload, label, teams }: {
   active?: boolean;
-  payload?: Array<{ value: number; dataKey: string; color: string }>;
+  payload?: Array<{ value: number; dataKey: string; color: string; payload?: { date?: string } }>;
   label?: string;
   teams: TeamConfig[];
 }) {
   if (!active || !payload || !payload.length) return null;
 
-  const date = label ? format(new Date(label), "MMM d, yyyy") : "";
+  // Get the original date from the payload data if available, otherwise use label
+  const originalDate = payload[0]?.payload?.date;
+  const date = originalDate
+    ? format(parseLocalDate(originalDate), "MMM d, yyyy")
+    : label || "";
 
   return (
     <div className="bg-gray-900 border-2 border-purple-500 rounded-lg shadow-lg p-4 min-w-[200px]">
@@ -296,7 +311,7 @@ export default function AnalyticsPage() {
   // Format daily data for chart
   const chartData = data?.dailyProduction.map((d) => ({
     ...d,
-    displayDate: format(new Date(d.date), "MMM d"),
+    displayDate: format(parseLocalDate(d.date), "MMM d"),
   })) || [];
 
   const showLife = chartFilter === "both" || chartFilter === "life";
@@ -313,7 +328,7 @@ export default function AnalyticsPage() {
 
   const teamDailyData = generateMockTeamData(30).map(d => ({
     ...d,
-    displayDate: format(new Date(d.date as string), "MMM d"),
+    displayDate: format(parseLocalDate(d.date as string), "MMM d"),
   }));
 
   const teamStats = MOCK_TEAM_STATS;

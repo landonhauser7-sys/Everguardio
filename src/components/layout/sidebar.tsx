@@ -16,6 +16,7 @@ import {
   Megaphone,
   Users2,
   ClipboardList,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Submit Deal", href: "/deals/new", icon: FileText },
   { name: "My Deals", href: "/deals", icon: FileText },
+  { name: "Calendar", href: "/calendar", icon: CalendarDays },
   { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
   { name: "Settings", href: "/settings", icon: Settings },
 ];

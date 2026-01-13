@@ -1,9 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { Search, FileText, Plus, Calendar } from "lucide-react";
+
+// Helper to parse date strings without timezone shifting
+function parseLocalDate(dateString: string): Date {
+  // Handle ISO datetime strings (e.g., "2024-01-15T00:00:00.000Z")
+  // by extracting just the date part and treating it as local
+  const dateOnly = dateString.split("T")[0];
+  const [year, month, day] = dateOnly.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -249,7 +258,7 @@ export function DealsList() {
                   <TableCell className="whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      {format(new Date(deal.applicationDate), "MMM d, yyyy")}
+                      {format(parseLocalDate(deal.applicationDate), "MMM d, yyyy")}
                     </div>
                   </TableCell>
                   <TableCell>
