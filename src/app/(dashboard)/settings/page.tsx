@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Save, Loader2, User, Lock, Camera, Trash2 } from "lucide-react";
+import { Save, Loader2, User, Lock, Camera, Trash2, X, Check } from "lucide-react";
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +19,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+
+function centerAspectCrop(mediaWidth: number, mediaHeight: number, aspect: number) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: "%",
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight
+    ),
+    mediaWidth,
+    mediaHeight
+  );
+}
 
 export default function SettingsPage() {
   const { data: session, update: updateSession } = useSession();
@@ -25,6 +50,13 @@ export default function SettingsPage() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Crop state
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<Crop>();
+  const imgRef = useRef<HTMLImageElement>(null);
 
   const [profileData, setProfileData] = useState({
     firstName: session?.user?.firstName || "",
@@ -41,23 +73,98 @@ export default function SettingsPage() {
     ? `${session.user.firstName?.[0] || ""}${session.user.lastName?.[0] || ""}`
     : "U";
 
-  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function onSelectFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload a JPEG, PNG, GIF, or WebP image.");
+      return;
+    }
+
+    // Validate file size (max 5MB for initial selection)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large. Maximum size is 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      setImageSrc(reader.result as string);
+      setCropModalOpen(true);
+    });
+    reader.readAsDataURL(file);
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const { width, height } = e.currentTarget;
+    setCrop(centerAspectCrop(width, height, 1));
+  }
+
+  const getCroppedImg = useCallback(async (): Promise<string | null> => {
+    if (!imgRef.current || !completedCrop) return null;
+
+    const image = imgRef.current;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) return null;
+
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    // Set output size (max 400x400 for profile photos)
+    const outputSize = 400;
+    canvas.width = outputSize;
+    canvas.height = outputSize;
+
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      outputSize,
+      outputSize
+    );
+
+    return canvas.toDataURL("image/jpeg", 0.9);
+  }, [completedCrop]);
+
+  async function handleCropComplete() {
+    const croppedImageUrl = await getCroppedImg();
+    if (!croppedImageUrl) {
+      toast.error("Failed to crop image");
+      return;
+    }
+
     setIsUploadingPhoto(true);
+    setCropModalOpen(false);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      // Convert base64 to blob for upload
+      const response = await fetch(croppedImageUrl);
+      const blob = await response.blob();
 
-      const response = await fetch("/api/profile/photo", {
+      const formData = new FormData();
+      formData.append("file", blob, "profile.jpg");
+
+      const uploadResponse = await fetch("/api/profile/photo", {
         method: "POST",
         body: formData,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
+      if (!uploadResponse.ok) {
+        const error = await uploadResponse.json();
         throw new Error(error.message || "Failed to upload photo");
       }
 
@@ -67,10 +174,17 @@ export default function SettingsPage() {
       toast.error(error instanceof Error ? error.message : "Failed to upload photo");
     } finally {
       setIsUploadingPhoto(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      setImageSrc(null);
+      setCrop(undefined);
+      setCompletedCrop(undefined);
     }
+  }
+
+  function handleCancelCrop() {
+    setCropModalOpen(false);
+    setImageSrc(null);
+    setCrop(undefined);
+    setCompletedCrop(undefined);
   }
 
   async function handleRemovePhoto() {
@@ -171,6 +285,56 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Manage your account and preferences.</p>
       </div>
 
+      {/* Image Crop Modal */}
+      <Dialog open={cropModalOpen} onOpenChange={setCropModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Crop Profile Photo</DialogTitle>
+            <DialogDescription>
+              Drag to reposition. The image will be cropped to a square.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4">
+            {imageSrc && (
+              <ReactCrop
+                crop={crop}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={1}
+                circularCrop
+                className="max-h-[400px]"
+              >
+                <img
+                  ref={imgRef}
+                  src={imageSrc}
+                  alt="Crop preview"
+                  onLoad={onImageLoad}
+                  className="max-h-[400px] max-w-full"
+                />
+              </ReactCrop>
+            )}
+            <div className="flex gap-2 w-full">
+              <Button
+                variant="outline"
+                onClick={handleCancelCrop}
+                className="flex-1"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCropComplete}
+                className="flex-1"
+                disabled={!completedCrop}
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Save Photo
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Profile Information */}
       <Card>
         <CardHeader>
@@ -209,7 +373,7 @@ export default function SettingsPage() {
                   ref={fileInputRef}
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp"
-                  onChange={handlePhotoUpload}
+                  onChange={onSelectFile}
                   className="hidden"
                 />
               </div>
