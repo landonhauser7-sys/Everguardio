@@ -27,11 +27,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (max 2MB for base64 storage)
-    const maxSize = 2 * 1024 * 1024;
+    // Validate file size (max 10MB - cropped result will be much smaller)
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
-        { message: "File too large. Maximum size is 2MB." },
+        { message: "File too large. Maximum size is 10MB." },
         { status: 400 }
       );
     }

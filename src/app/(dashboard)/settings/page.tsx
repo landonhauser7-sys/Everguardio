@@ -84,9 +84,9 @@ export default function SettingsPage() {
       return;
     }
 
-    // Validate file size (max 5MB for initial selection)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File too large. Maximum size is 5MB.");
+    // Validate file size (max 10MB for initial selection - cropped result will be smaller)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File too large. Maximum size is 10MB.");
       return;
     }
 
