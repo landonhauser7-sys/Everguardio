@@ -8,11 +8,17 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function getPrismaClient() {
-  const connectionString = process.env.DATABASE_URL;
+  let connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
     throw new Error("DATABASE_URL is not defined");
   }
+
+  // Remove channel_binding parameter - it causes issues with the pg driver
+  connectionString = connectionString.replace(/[&?]channel_binding=require/g, '');
+
+  // Clean up any double && or trailing ? that might result
+  connectionString = connectionString.replace(/&&/g, '&').replace(/\?&/g, '?').replace(/\?$/, '');
 
   if (!globalForPrisma.pool) {
     globalForPrisma.pool = new Pool({
