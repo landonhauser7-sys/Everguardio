@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,32 +27,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024;
+    // Validate file size (max 2MB for base64 storage)
+    const maxSize = 2 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
-        { message: "File too large. Maximum size is 5MB." },
+        { message: "File too large. Maximum size is 2MB." },
         { status: 400 }
       );
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "avatars");
-    await mkdir(uploadsDir, { recursive: true });
-
-    // Generate unique filename
-    const ext = file.name.split(".").pop() || "jpg";
-    const filename = `${session.user.id}-${Date.now()}.${ext}`;
-    const filepath = path.join(uploadsDir, filename);
-
-    // Write file to disk
+    // Convert file to base64 data URL for database storage
+    // This works on serverless platforms like Netlify that don't have persistent file storage
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
+    const base64 = buffer.toString("base64");
+    const photoUrl = `data:${file.type};base64,${base64}`;
 
     // Update user's profile photo URL in database
-    const photoUrl = `/uploads/avatars/${filename}`;
-
     await prisma.users.update({
       where: { id: session.user.id },
       data: {

@@ -113,46 +113,6 @@ const COLORS = [
   "#06B6D4", "#EC4899", "#84CC16", "#F97316", "#6366F1",
 ];
 
-// Example mock team data for when no real teams exist
-const MOCK_TEAMS: TeamConfig[] = [
-  { id: "mock-1", name: "The Closers", emoji: "🔥", color: "#EF4444" },
-  { id: "mock-2", name: "Phoenix Force", emoji: "⚡", color: "#A855F7" },
-  { id: "mock-3", name: "The Wolves", emoji: "🐺", color: "#06B6D4" },
-  { id: "mock-4", name: "Elite Squad", emoji: "💎", color: "#F59E0B" },
-];
-
-function generateMockTeamData(days: number): Array<Record<string, unknown>> {
-  const data: Array<Record<string, unknown>> = [];
-  const now = new Date();
-
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split("T")[0];
-
-    // Generate realistic-looking performance with natural variations
-    const dayOfWeek = date.getDay();
-    const weekendMultiplier = dayOfWeek === 0 || dayOfWeek === 6 ? 0.3 : 1;
-
-    data.push({
-      date: dateStr,
-      "mock-1": Math.floor((3000 + Math.random() * 5000 + Math.sin(i / 5) * 1500) * weekendMultiplier),
-      "mock-2": Math.floor((2500 + Math.random() * 4000 + Math.cos(i / 4) * 1200) * weekendMultiplier),
-      "mock-3": Math.floor((2000 + Math.random() * 3500 + Math.sin(i / 6) * 1000) * weekendMultiplier),
-      "mock-4": Math.floor((1800 + Math.random() * 3000 + Math.cos(i / 5) * 800) * weekendMultiplier),
-    });
-  }
-
-  return data;
-}
-
-const MOCK_TEAM_STATS: TeamStat[] = [
-  { rank: 1, teamId: "mock-1", teamName: "The Closers", teamEmoji: "🔥", teamColor: "#EF4444", totalDeals: 45, lifeDeals: 38, healthDeals: 7, totalPremium: 125000, agentCount: 10, avgPerAgent: 12500 },
-  { rank: 2, teamId: "mock-2", teamName: "Phoenix Force", teamEmoji: "⚡", teamColor: "#A855F7", totalDeals: 38, lifeDeals: 32, healthDeals: 6, totalPremium: 98000, agentCount: 9, avgPerAgent: 10889 },
-  { rank: 3, teamId: "mock-3", teamName: "The Wolves", teamEmoji: "🐺", teamColor: "#06B6D4", totalDeals: 32, lifeDeals: 28, healthDeals: 4, totalPremium: 87000, agentCount: 8, avgPerAgent: 10875 },
-  { rank: 4, teamId: "mock-4", teamName: "Elite Squad", teamEmoji: "💎", teamColor: "#F59E0B", totalDeals: 28, lifeDeals: 24, healthDeals: 4, totalPremium: 76000, agentCount: 8, avgPerAgent: 9500 },
-];
-
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -289,8 +249,10 @@ export default function AnalyticsPage() {
       if (response.ok) {
         const result = await response.json();
         setData(result);
-        // Initialize visible teams with mock teams
-        setVisibleTeams(new Set(MOCK_TEAMS.map(t => t.id)));
+        // Initialize visible teams with real teams if available
+        if (result.teamPerformance?.hasRealData && result.teamPerformance.teams.length > 0) {
+          setVisibleTeams(new Set(result.teamPerformance.teams.map((t: TeamConfig) => t.id)));
+        }
       }
     } catch (error) {
       console.error("Error fetching analytics:", error);
@@ -323,18 +285,20 @@ export default function AnalyticsPage() {
     { name: "Health", value: data.lifeVsHealth.health.premium, color: "#3B82F6" },
   ].filter(d => d.value > 0) : [];
 
-  // Team chart data - always use mock data for demo
-  const teamConfig = MOCK_TEAMS;
+  // Team chart data - use real data from API if available
+  const hasRealTeamData = data?.teamPerformance?.hasRealData &&
+    data.teamPerformance.teams.length > 0;
 
-  const teamDailyData = generateMockTeamData(30).map(d => ({
-    ...d,
-    displayDate: format(parseLocalDate(d.date as string), "MMM d"),
-  }));
+  const teamConfig = hasRealTeamData ? data.teamPerformance.teams : [];
 
-  const teamStats = MOCK_TEAM_STATS;
+  const teamDailyData = hasRealTeamData
+    ? (data.teamPerformance.dailyData || []).map(d => ({
+        ...d,
+        displayDate: format(parseLocalDate(d.date as string), "MMM d"),
+      }))
+    : [];
 
-  // Flag for showing demo label
-  const showingMockData = true;
+  const teamStats = hasRealTeamData ? data.teamPerformance.stats : [];
 
   const toggleTeamVisibility = (teamId: string) => {
     setVisibleTeams(prev => {
@@ -414,7 +378,7 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Agent Commissions (70%)</CardTitle>
+            <CardTitle className="text-sm font-medium">Agent Commissions</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -430,7 +394,7 @@ export default function AnalyticsPage() {
 
         <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Manager Overrides (40%)</CardTitle>
+            <CardTitle className="text-sm font-medium">Manager Overrides</CardTitle>
             <TrendingUp className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
@@ -446,7 +410,7 @@ export default function AnalyticsPage() {
 
         <Card className="border-l-4 border-l-amber-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Owner Overrides (20%)</CardTitle>
+            <CardTitle className="text-sm font-medium">Owner Overrides</CardTitle>
             <TrendingUp className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
@@ -687,7 +651,8 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      {/* Team Performance Comparison */}
+      {/* Team Performance Comparison - Only show when real team data exists */}
+      {hasRealTeamData && (
       <Card>
         <CardHeader className="pb-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -697,10 +662,7 @@ export default function AnalyticsPage() {
                 Team Performance Comparison
               </CardTitle>
               <CardDescription>
-                {showingMockData
-                  ? "Example team data — Create teams to see real performance"
-                  : `Team performance over ${presetLabels[datePreset].toLowerCase()}`
-                }
+                Team performance over {presetLabels[datePreset].toLowerCase()}
               </CardDescription>
             </div>
             <div className="flex gap-1 bg-muted p-1 rounded-lg">
@@ -816,18 +778,17 @@ export default function AnalyticsPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
-      {/* Team Performance Summary Table */}
+      {/* Team Performance Summary Table - Only show when real team data exists */}
+      {hasRealTeamData && (
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <CardTitle>Team Performance Summary</CardTitle>
               <CardDescription>
-                {showingMockData
-                  ? "Example data — Create teams to see real stats"
-                  : `Rankings for ${presetLabels[datePreset].toLowerCase()}`
-                }
+                Rankings for {presetLabels[datePreset].toLowerCase()}
               </CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={exportTeamStatsToCsv}>
@@ -925,6 +886,7 @@ export default function AnalyticsPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Charts Row */}
       <div className="grid gap-4 md:grid-cols-2">
