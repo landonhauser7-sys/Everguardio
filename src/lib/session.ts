@@ -27,29 +27,9 @@ const getCookieName = () => {
     : "next-auth.session-token";
 };
 
-// Simple key derivation using Web Crypto API
-async function getSigningKey(secret: string): Promise<Uint8Array> {
-  const encoder = new TextEncoder();
-  const keyMaterial = await globalThis.crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "PBKDF2" },
-    false,
-    ["deriveBits"]
-  );
-
-  const bits = await globalThis.crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt: encoder.encode("nextauth-session-salt"),
-      iterations: 1000,
-      hash: "SHA-256",
-    },
-    keyMaterial,
-    256
-  );
-
-  return new Uint8Array(bits);
+// Simple secret encoding
+function getSigningKey(secret: string): Uint8Array {
+  return new TextEncoder().encode(secret);
 }
 
 // Encode session to signed JWT (not encrypted, but signed)
@@ -58,7 +38,7 @@ export async function encodeSession(user: SessionUser, maxAge: number = 30 * 24 
   if (!secret) throw new Error("NEXTAUTH_SECRET not set");
 
   const now = Math.floor(Date.now() / 1000);
-  const signingKey = await getSigningKey(secret);
+  const signingKey = getSigningKey(secret);
 
   const token = await new jose.SignJWT({
     ...user,
@@ -79,7 +59,7 @@ export async function decodeSession(token: string): Promise<SessionUser | null> 
   if (!secret) return null;
 
   try {
-    const signingKey = await getSigningKey(secret);
+    const signingKey = getSigningKey(secret);
     const { payload } = await jose.jwtVerify(token, signingKey, {
       clockTolerance: 15,
     });
