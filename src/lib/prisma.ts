@@ -1,27 +1,29 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaNeon } from "@prisma/adapter-neon";
-import { neon } from "@neondatabase/serverless";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  pool: Pool | undefined;
 };
 
 function getPrismaClient() {
-  let connectionString = process.env.DATABASE_URL;
+  const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
     throw new Error("DATABASE_URL is not defined");
   }
 
-  // Remove channel_binding parameter - it causes issues
-  connectionString = connectionString.replace(/[&?]channel_binding=require/g, '');
-  connectionString = connectionString.replace(/&&/g, '&').replace(/\?&/g, '?').replace(/\?$/, '');
+  if (!globalForPrisma.pool) {
+    globalForPrisma.pool = new Pool({
+      connectionString,
+      max: 1,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10000,
+    });
+  }
 
-  // Use Neon's HTTP-based serverless driver
-  const sql = neon(connectionString);
-
-  // Cast to any to work around type mismatch between package versions
-  const adapter = new PrismaNeon(sql as any);
+  const adapter = new PrismaPg(globalForPrisma.pool);
 
   return new PrismaClient({
     adapter,
