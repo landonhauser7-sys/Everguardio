@@ -8,3 +8,14 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Disable caching for auth routes
+[[headers]]
+  for = "/api/auth/*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+
+[[headers]]
+  for = "/login"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
