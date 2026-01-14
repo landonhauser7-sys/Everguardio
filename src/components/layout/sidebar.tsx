@@ -63,7 +63,7 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 py-4">
         {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
           return (
             <Link
               key={item.name}
@@ -83,7 +83,7 @@ export function Sidebar() {
 
         {/* Manager/Admin Team Section */}
         {(isManager || isAdmin) && managerNavigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
           return (
             <Link
               key={item.name}
@@ -110,7 +110,7 @@ export function Sidebar() {
               </p>
             </div>
             {adminNavigation.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+              const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
               return (
                 <Link
                   key={item.name}
