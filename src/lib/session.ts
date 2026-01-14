@@ -1,4 +1,3 @@
-import * as jose from "jose";
 import { cookies } from "next/headers";
 
 // Session types
@@ -27,59 +26,43 @@ const getCookieName = () => {
     : "next-auth.session-token";
 };
 
-// Simple secret encoding
-function getSigningKey(secret: string): Uint8Array {
-  return new TextEncoder().encode(secret);
-}
-
-// Encode session to signed JWT (not encrypted, but signed)
-export async function encodeSession(user: SessionUser, maxAge: number = 30 * 24 * 60 * 60): Promise<string> {
-  const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) throw new Error("NEXTAUTH_SECRET not set");
-
-  const now = Math.floor(Date.now() / 1000);
-  const signingKey = getSigningKey(secret);
-
-  const token = await new jose.SignJWT({
-    ...user,
-    iat: now,
-    exp: now + maxAge,
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt(now)
-    .setExpirationTime(now + maxAge)
-    .sign(signingKey);
-
-  return token;
-}
-
-// Decode JWT to session
-export async function decodeSession(token: string): Promise<SessionUser | null> {
-  const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) return null;
-
+// Decode session from token
+export function decodeSession(token: string): SessionUser | null {
   try {
-    const signingKey = getSigningKey(secret);
-    const { payload } = await jose.jwtVerify(token, signingKey, {
-      clockTolerance: 15,
-    });
+    const secret = process.env.NEXTAUTH_SECRET || "fallback-secret";
+
+    // Token format: base64url(payload).signature
+    const parts = token.split(".");
+    if (parts.length !== 2) return null;
+
+    const [payload, signature] = parts;
+
+    // Verify signature
+    const expectedSignature = Buffer.from(secret + payload).toString("base64url").slice(0, 43);
+    if (signature !== expectedSignature) {
+      console.error("Invalid session signature");
+      return null;
+    }
+
+    // Decode payload
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf-8"));
 
     // Check expiration
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+    if (data.exp && data.exp < Date.now()) {
       return null;
     }
 
     return {
-      id: payload.id as string,
-      email: payload.email as string,
-      name: payload.name as string,
-      firstName: payload.firstName as string,
-      lastName: payload.lastName as string,
-      role: payload.role as string,
-      teamId: payload.teamId as string | null,
-      teamName: payload.teamName as string | null,
-      profilePhotoUrl: payload.profilePhotoUrl as string | null,
-      commissionLevel: payload.commissionLevel as number | null,
+      id: data.id,
+      email: data.email,
+      name: data.name,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      role: data.role,
+      teamId: data.teamId,
+      teamName: data.teamName,
+      profilePhotoUrl: data.profilePhotoUrl,
+      commissionLevel: data.commissionLevel,
     };
   } catch (error) {
     console.error("Failed to decode session:", error);
@@ -95,7 +78,7 @@ export async function getSession(): Promise<Session | null> {
 
     if (!token) return null;
 
-    const user = await decodeSession(token);
+    const user = decodeSession(token);
     if (!user) return null;
 
     return {
@@ -106,20 +89,6 @@ export async function getSession(): Promise<Session | null> {
     console.error("Failed to get session:", error);
     return null;
   }
-}
-
-// Set session cookie
-export async function setSessionCookie(token: string, maxAge: number = 30 * 24 * 60 * 60) {
-  const cookieStore = await cookies();
-  const isProduction = process.env.NODE_ENV === "production";
-
-  cookieStore.set(getCookieName(), token, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: "lax",
-    path: "/",
-    maxAge,
-  });
 }
 
 // Clear session cookie
