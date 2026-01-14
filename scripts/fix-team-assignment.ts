@@ -1,13 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
 
-const connectionString = process.env.DATABASE_URL!;
-const cleanedUrl = connectionString.replace(/&?channel_binding=require/g, '');
-const pool = new Pool({ connectionString: cleanedUrl, max: 1 });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 async function fix() {
   // Find Landon first
