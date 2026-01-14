@@ -12,48 +12,53 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email and password are required");
-        }
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            return null;
+          }
 
-        const user = await prisma.users.findUnique({
-          where: { email: credentials.email },
-          include: {
-            teams_users_team_idToteams: {
-              select: { id: true, name: true },
+          const user = await prisma.users.findUnique({
+            where: { email: credentials.email },
+            include: {
+              teams_users_team_idToteams: {
+                select: { id: true, name: true },
+              },
             },
-          },
-        });
+          });
 
-        if (!user) {
-          throw new Error("Invalid email or password");
+          if (!user) {
+            return null;
+          }
+
+          if (user.status !== "ACTIVE") {
+            return null;
+          }
+
+          const isValidPassword = await bcrypt.compare(
+            credentials.password,
+            user.password_hash
+          );
+
+          if (!isValidPassword) {
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: `${user.first_name} ${user.last_name}`,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            role: user.role,
+            teamId: user.team_id,
+            teamName: user.teams_users_team_idToteams?.name || null,
+            profilePhotoUrl: user.profile_photo_url,
+            commissionLevel: user.commission_level,
+          };
+        } catch (error) {
+          console.error("Auth error:", error);
+          return null;
         }
-
-        if (user.status !== "ACTIVE") {
-          throw new Error("Your account is not active");
-        }
-
-        const isValidPassword = await bcrypt.compare(
-          credentials.password,
-          user.password_hash
-        );
-
-        if (!isValidPassword) {
-          throw new Error("Invalid email or password");
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: `${user.first_name} ${user.last_name}`,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          role: user.role,
-          teamId: user.team_id,
-          teamName: user.teams_users_team_idToteams?.name || null,
-          profilePhotoUrl: user.profile_photo_url,
-          commissionLevel: user.commission_level,
-        };
       },
     }),
   ],
