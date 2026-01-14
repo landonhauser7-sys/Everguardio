@@ -18,10 +18,19 @@ export async function POST(request: Request) {
 
     const user = await prisma.users.findUnique({
       where: { email },
+      include: {
+        teams_users_team_idToteams: {
+          select: { id: true, name: true },
+        },
+      },
     });
 
     if (!user) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    if (user.status !== "ACTIVE") {
+      return NextResponse.json({ error: "Account not active" }, { status: 401 });
     }
 
     const isValid = await bcrypt.compare(password, user.password_hash);
@@ -29,12 +38,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    // Simple base64 encoded session (not secure, just for testing)
+    // Session data with all user info
     const sessionData = JSON.stringify({
       id: user.id,
       email: user.email,
       name: `${user.first_name} ${user.last_name}`,
+      firstName: user.first_name,
+      lastName: user.last_name,
       role: user.role,
+      teamId: user.team_id,
+      teamName: user.teams_users_team_idToteams?.name || null,
+      profilePhotoUrl: user.profile_photo_url,
+      commissionLevel: user.commission_level,
       exp: Date.now() + 30 * 24 * 60 * 60 * 1000,
     });
     const token = Buffer.from(sessionData).toString("base64");

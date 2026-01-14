@@ -26,26 +26,11 @@ const getCookieName = () => {
     : "next-auth.session-token";
 };
 
-// Decode session from token
+// Decode session from token (plain base64 JSON)
 export function decodeSession(token: string): SessionUser | null {
   try {
-    const secret = process.env.NEXTAUTH_SECRET || "fallback-secret";
-
-    // Token format: base64url(payload).signature
-    const parts = token.split(".");
-    if (parts.length !== 2) return null;
-
-    const [payload, signature] = parts;
-
-    // Verify signature
-    const expectedSignature = Buffer.from(secret + payload).toString("base64url").slice(0, 43);
-    if (signature !== expectedSignature) {
-      console.error("Invalid session signature");
-      return null;
-    }
-
-    // Decode payload
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf-8"));
+    // Decode base64 payload
+    const data = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
 
     // Check expiration
     if (data.exp && data.exp < Date.now()) {
@@ -56,13 +41,13 @@ export function decodeSession(token: string): SessionUser | null {
       id: data.id,
       email: data.email,
       name: data.name,
-      firstName: data.firstName,
-      lastName: data.lastName,
+      firstName: data.firstName || data.name?.split(" ")[0] || "",
+      lastName: data.lastName || data.name?.split(" ").slice(1).join(" ") || "",
       role: data.role,
-      teamId: data.teamId,
-      teamName: data.teamName,
-      profilePhotoUrl: data.profilePhotoUrl,
-      commissionLevel: data.commissionLevel,
+      teamId: data.teamId || null,
+      teamName: data.teamName || null,
+      profilePhotoUrl: data.profilePhotoUrl || null,
+      commissionLevel: data.commissionLevel || null,
     };
   } catch (error) {
     console.error("Failed to decode session:", error);
