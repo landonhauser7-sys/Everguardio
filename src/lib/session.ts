@@ -21,6 +21,19 @@ export interface Session {
   expires: string;
 }
 
+// Generate UUID (fallback for environments without crypto.randomUUID)
+function generateUUID(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback UUID generation
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 // Cookie name based on environment
 const getCookieName = () => {
   return process.env.NODE_ENV === "production"
@@ -55,7 +68,7 @@ export async function encodeSession(user: SessionUser, maxAge: number = 30 * 24 
     .setProtectedHeader({ alg: "dir", enc: "A256GCM" })
     .setIssuedAt(now)
     .setExpirationTime(now + maxAge)
-    .setJti(crypto.randomUUID())
+    .setJti(generateUUID())
     .encrypt(encryptionKey);
 
   return token;

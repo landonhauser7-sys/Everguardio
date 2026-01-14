@@ -57,11 +57,11 @@ export async function POST(request: Request) {
       commissionLevel: user.commission_level,
     };
 
-    // Encode and set session cookie
+    // Encode session
     const token = await encodeSession(sessionUser);
-    await setSessionCookie(token);
 
-    return NextResponse.json({
+    // Create response with cookie
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
@@ -70,6 +70,20 @@ export async function POST(request: Request) {
         role: user.role,
       },
     });
+
+    // Set cookie on response directly
+    const isProduction = process.env.NODE_ENV === "production";
+    const cookieName = isProduction ? "__Secure-next-auth.session-token" : "next-auth.session-token";
+
+    response.cookies.set(cookieName, token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60,
+    });
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(
