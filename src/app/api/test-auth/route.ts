@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       status: user.status,
       role: user.role,
       passwordValid: isValid,
+      hashPrefix: user.password_hash.substring(0, 30),
     });
   } catch (error) {
     console.error("Test auth error:", error);
