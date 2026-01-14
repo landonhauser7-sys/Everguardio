@@ -1,22 +1,9 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import * as jose from "jose";
-import { hkdf } from "@panva/hkdf";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+import { encodeSession, setSessionCookie } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
-
-// Derive encryption key exactly like NextAuth does
-async function getDerivedEncryptionKey(secret: string) {
-  return await hkdf(
-    "sha256",
-    secret,
-    "",
-    "NextAuth.js Generated Encryption Key",
-    32
-  );
-}
 
 export async function POST(request: Request) {
   try {
@@ -56,11 +43,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    // Create token payload matching NextAuth format
-    const maxAge = 30 * 24 * 60 * 60; // 30 days
-    const now = Math.floor(Date.now() / 1000);
-
-    const tokenPayload = {
+    // Create session user object
+    const sessionUser = {
       id: user.id,
       email: user.email,
       name: `${user.first_name} ${user.last_name}`,
@@ -71,35 +55,11 @@ export async function POST(request: Request) {
       teamName: user.teams_users_team_idToteams?.name || null,
       profilePhotoUrl: user.profile_photo_url,
       commissionLevel: user.commission_level,
-      iat: now,
-      exp: now + maxAge,
     };
 
-    // Derive encryption key exactly like NextAuth
-    const encryptionKey = await getDerivedEncryptionKey(process.env.NEXTAUTH_SECRET!);
-
-    // Create encrypted JWT using jose (same as NextAuth)
-    const token = await new jose.EncryptJWT(tokenPayload)
-      .setProtectedHeader({ alg: "dir", enc: "A256GCM" })
-      .setIssuedAt(now)
-      .setExpirationTime(now + maxAge)
-      .setJti(crypto.randomUUID())
-      .encrypt(encryptionKey);
-
-    // Set cookie using Next.js cookies API
-    const cookieStore = await cookies();
-    const isProduction = process.env.NODE_ENV === "production";
-    const cookieName = isProduction
-      ? "__Secure-next-auth.session-token"
-      : "next-auth.session-token";
-
-    cookieStore.set(cookieName, token, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "lax",
-      path: "/",
-      maxAge: maxAge,
-    });
+    // Encode and set session cookie
+    const token = await encodeSession(sessionUser);
+    await setSessionCookie(token);
 
     return NextResponse.json({
       success: true,

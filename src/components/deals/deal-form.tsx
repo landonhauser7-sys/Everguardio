@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/components/session-provider";
 import { toast } from "sonner";
 import { Loader2, DollarSign, Calculator } from "lucide-react";
 

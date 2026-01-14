@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut } from "@/components/session-provider";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Moon, Sun, LogOut, Settings, Menu, Shield } from "lucide-react";

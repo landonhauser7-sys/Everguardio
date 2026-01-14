@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/components/session-provider";
 import { toast } from "sonner";
 import { Save, Loader2, User, Lock, Camera, Trash2, X, Check } from "lucide-react";
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from "react-image-crop";

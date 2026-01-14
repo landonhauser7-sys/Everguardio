@@ -1,12 +1,12 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
+import { CustomSessionProvider } from "./session-provider";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
+    <CustomSessionProvider>
       <ThemeProvider
         attribute="class"
         defaultTheme="dark"
@@ -16,6 +16,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         {children}
         <Toaster position="top-right" richColors />
       </ThemeProvider>
-    </SessionProvider>
+    </CustomSessionProvider>
   );
 }
