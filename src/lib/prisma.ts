@@ -1,10 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import pg from "pg";
+
+const { Pool } = pg;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
-  pool: Pool | undefined;
+  pool: pg.Pool | undefined;
 };
 
 function getPrismaClient() {
@@ -19,7 +21,8 @@ function getPrismaClient() {
       connectionString,
       max: 1,
       ssl: { rejectUnauthorized: false },
-      connectionTimeoutMillis: 10000,
+      connectionTimeoutMillis: 15000,
+      idleTimeoutMillis: 20000,
     });
   }
 
