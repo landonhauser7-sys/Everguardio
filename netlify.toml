@@ -4,6 +4,7 @@
 
 [build.environment]
   NEXT_TELEMETRY_DISABLED = "1"
+  PRISMA_CLI_BINARY_TARGETS = "rhel-openssl-3.0.x,debian-openssl-3.0.x,linux-musl-openssl-3.0.x"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
