@@ -1,5 +1,4 @@
 import * as jose from "jose";
-import { hkdf } from "@panva/hkdf";
 import { cookies } from "next/headers";
 
 // Session types
@@ -21,19 +20,6 @@ export interface Session {
   expires: string;
 }
 
-// Generate UUID (fallback for environments without crypto.randomUUID)
-function generateUUID(): string {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  // Fallback UUID generation
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
 // Cookie name based on environment
 const getCookieName = () => {
   return process.env.NODE_ENV === "production"
@@ -41,35 +27,48 @@ const getCookieName = () => {
     : "next-auth.session-token";
 };
 
-// Derive encryption key (same as NextAuth)
-async function getDerivedEncryptionKey(secret: string): Promise<Uint8Array> {
-  return await hkdf(
-    "sha256",
-    secret,
-    "",
-    "NextAuth.js Generated Encryption Key",
-    32
+// Simple key derivation using Web Crypto API
+async function getSigningKey(secret: string): Promise<Uint8Array> {
+  const encoder = new TextEncoder();
+  const keyMaterial = await globalThis.crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"]
   );
+
+  const bits = await globalThis.crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: encoder.encode("nextauth-session-salt"),
+      iterations: 1000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256
+  );
+
+  return new Uint8Array(bits);
 }
 
-// Encode session to JWT
+// Encode session to signed JWT (not encrypted, but signed)
 export async function encodeSession(user: SessionUser, maxAge: number = 30 * 24 * 60 * 60): Promise<string> {
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) throw new Error("NEXTAUTH_SECRET not set");
 
   const now = Math.floor(Date.now() / 1000);
-  const encryptionKey = await getDerivedEncryptionKey(secret);
+  const signingKey = await getSigningKey(secret);
 
-  const token = await new jose.EncryptJWT({
+  const token = await new jose.SignJWT({
     ...user,
     iat: now,
     exp: now + maxAge,
   })
-    .setProtectedHeader({ alg: "dir", enc: "A256GCM" })
+    .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt(now)
     .setExpirationTime(now + maxAge)
-    .setJti(generateUUID())
-    .encrypt(encryptionKey);
+    .sign(signingKey);
 
   return token;
 }
@@ -80,8 +79,8 @@ export async function decodeSession(token: string): Promise<SessionUser | null> 
   if (!secret) return null;
 
   try {
-    const encryptionKey = await getDerivedEncryptionKey(secret);
-    const { payload } = await jose.jwtDecrypt(token, encryptionKey, {
+    const signingKey = await getSigningKey(secret);
+    const { payload } = await jose.jwtVerify(token, signingKey, {
       clockTolerance: 15,
     });
 

@@ -58,7 +58,16 @@ export async function POST(request: Request) {
     };
 
     // Encode session
-    const token = await encodeSession(sessionUser);
+    let token: string;
+    try {
+      token = await encodeSession(sessionUser);
+    } catch (encodeError) {
+      console.error("Session encode error:", encodeError);
+      return NextResponse.json({
+        error: "Session encoding failed",
+        details: encodeError instanceof Error ? encodeError.message : "Unknown",
+      }, { status: 500 });
+    }
 
     // Create response with cookie
     const response = NextResponse.json({
