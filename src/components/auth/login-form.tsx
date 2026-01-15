@@ -14,9 +14,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useSession } from "@/components/session-provider";
 
 export function LoginForm() {
   const router = useRouter();
+  const { update: updateSession } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +43,8 @@ export function LoginForm() {
       if (!response.ok) {
         setError(data.error || "Invalid email or password");
       } else {
+        // Update session before navigating to ensure permissions load correctly
+        await updateSession();
         router.push("/dashboard");
         router.refresh();
       }
