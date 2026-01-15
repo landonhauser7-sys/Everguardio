@@ -43,16 +43,22 @@ const mgaNavigation = [
   { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { name: "Commissions", href: "/admin/commissions", icon: Percent },
   { name: "Onboarding", href: "/onboarding", icon: ClipboardList },
-  { name: "User Management", href: "/admin/users", icon: Users },
   { name: "Manage Teams", href: "/admin/teams", icon: Users2 },
   { name: "Carriers", href: "/admin/carriers", icon: Building2 },
   { name: "Announcements", href: "/admin/announcements", icon: Megaphone },
+];
+
+// Only AO/PARTNER can see these
+const adminNavigation = [
+  { name: "User Management", href: "/admin/users", icon: Users },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
 
+  // Admin roles: AO, PARTNER (can see user management)
+  const isAdmin = ["AO", "PARTNER"].includes(session?.user?.role || "");
   // MGA and above (can see management section)
   const isMGA = ["MGA", "PARTNER", "AO"].includes(session?.user?.role || "");
   // Manager roles: BA and above (can see team and hierarchy)
@@ -118,6 +124,25 @@ export function Sidebar() {
               </p>
             </div>
             {mgaNavigation.map((item) => {
+              const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  {item.name}
+                </Link>
+              );
+            })}
+            {/* Admin-only items within Management section */}
+            {isAdmin && adminNavigation.map((item) => {
               const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
               return (
                 <Link
