@@ -62,27 +62,52 @@ interface Carrier {
   insurance_types: string[];
 }
 
-export function DealForm() {
+interface DealData {
+  id: string;
+  clientName: string;
+  clientAge: number | null;
+  clientState: string | null;
+  clientPhone: string | null;
+  policyNumber: string | null;
+  draftDate: string | null;
+  leadSource: string | null;
+  policyType: string;
+  carrierName: string;
+  insuranceType: "LIFE" | "HEALTH";
+  faceAmount: number | null;
+  annualPremium: number;
+  applicationDate: string;
+  status: string;
+  notes: string | null;
+}
+
+interface DealFormProps {
+  deal?: DealData;
+  mode?: "create" | "edit";
+}
+
+export function DealForm({ deal, mode = "create" }: DealFormProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [carriers, setCarriers] = useState<Carrier[]>([]);
 
   const [formData, setFormData] = useState({
-    clientName: "",
-    clientAge: "",
-    clientState: "",
-    clientPhone: "",
-    policyNumber: "",
-    draftDate: "",
-    leadSource: "",
-    policyType: "",
-    carrierName: "",
-    insuranceType: "LIFE",
-    faceAmount: "",
-    annualPremium: "",
-    applicationDate: new Date().toISOString().split("T")[0],
-    notes: "",
+    clientName: deal?.clientName || "",
+    clientAge: deal?.clientAge?.toString() || "",
+    clientState: deal?.clientState || "",
+    clientPhone: deal?.clientPhone || "",
+    policyNumber: deal?.policyNumber || "",
+    draftDate: deal?.draftDate ? deal.draftDate.split("T")[0] : "",
+    leadSource: deal?.leadSource || "",
+    policyType: deal?.policyType || "",
+    carrierName: deal?.carrierName || "",
+    insuranceType: deal?.insuranceType || "LIFE",
+    faceAmount: deal?.faceAmount?.toString() || "",
+    annualPremium: deal?.annualPremium?.toString() || "",
+    applicationDate: deal?.applicationDate ? deal.applicationDate.split("T")[0] : new Date().toISOString().split("T")[0],
+    status: deal?.status || "SUBMITTED",
+    notes: deal?.notes || "",
   });
 
   const commissionLevel = session?.user?.commissionLevel || 70;
@@ -111,26 +136,29 @@ export function DealForm() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/deals", {
-        method: "POST",
+      const url = mode === "edit" ? `/api/deals/${deal?.id}` : "/api/deals";
+      const method = mode === "edit" ? "PATCH" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          clientAge: formData.clientAge ? parseInt(formData.clientAge) : undefined,
-          faceAmount: formData.faceAmount ? parseFloat(formData.faceAmount) : undefined,
+          clientAge: formData.clientAge ? parseInt(formData.clientAge) : null,
+          faceAmount: formData.faceAmount ? parseFloat(formData.faceAmount) : null,
           annualPremium: parseFloat(formData.annualPremium),
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to submit deal");
+        throw new Error(error.message || `Failed to ${mode === "edit" ? "update" : "submit"} deal`);
       }
 
-      toast.success("Deal submitted successfully!");
+      toast.success(mode === "edit" ? "Deal updated successfully!" : "Deal submitted successfully!");
       router.push("/deals");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to submit deal");
+      toast.error(error instanceof Error ? error.message : `Failed to ${mode === "edit" ? "update" : "submit"} deal`);
     } finally {
       setIsSubmitting(false);
     }
@@ -234,7 +262,7 @@ export function DealForm() {
               <Label htmlFor="insuranceType">Insurance Type *</Label>
               <Select
                 value={formData.insuranceType}
-                onValueChange={(value) => setFormData({ ...formData, insuranceType: value, carrierName: "" })}
+                onValueChange={(value) => setFormData({ ...formData, insuranceType: value as "LIFE" | "HEALTH", carrierName: "" })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -385,6 +413,38 @@ export function DealForm() {
         </Card>
       )}
 
+      {/* Status (edit mode only) */}
+      {mode === "edit" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Deal Status</CardTitle>
+            <CardDescription>Update the status of this deal</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setFormData({ ...formData, status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="APPROVED">Approved</SelectItem>
+                  <SelectItem value="ISSUED">Issued</SelectItem>
+                  <SelectItem value="IN_FORCE">In Force</SelectItem>
+                  <SelectItem value="LAPSED">Lapsed</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Submit Button */}
       <div className="flex gap-4">
         <Button
@@ -398,10 +458,10 @@ export function DealForm() {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
+              {mode === "edit" ? "Saving..." : "Submitting..."}
             </>
           ) : (
-            "Submit Deal"
+            mode === "edit" ? "Save Changes" : "Submit Deal"
           )}
         </Button>
       </div>

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
-import { Search, FileText, Plus, Calendar, Users, User } from "lucide-react";
+import { Search, FileText, Plus, Calendar, Users, User, Trash2, Pencil, MoreHorizontal } from "lucide-react";
+import { toast } from "sonner";
 
 // Helper to parse date strings without timezone shifting
 function parseLocalDate(dateString: string): Date {
@@ -40,6 +41,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface OverrideSplit {
   userId: string;
@@ -148,6 +165,8 @@ export function DealsList() {
   const [selectedAgentId, setSelectedAgentId] = useState<string>("all");
   const [downlineMembers, setDownlineMembers] = useState<DownlineMember[]>([]);
   const [isManager, setIsManager] = useState(false);
+  const [deletingDeal, setDeletingDeal] = useState<Deal | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchDeals = useCallback(async () => {
     setIsLoading(true);
@@ -192,6 +211,31 @@ export function DealsList() {
       setScope("agent");
     } else {
       setScope("personal");
+    }
+  };
+
+  // Handle delete deal
+  const handleDeleteDeal = async () => {
+    if (!deletingDeal) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/deals/${deletingDeal.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete deal");
+      }
+
+      toast.success("Deal deleted successfully");
+      setDeals(deals.filter(d => d.id !== deletingDeal.id));
+      setDeletingDeal(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete deal");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -379,6 +423,7 @@ export function DealsList() {
                   <TableHead className="text-right">My Override</TableHead>
                 )}
                 <TableHead>Status</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -442,11 +487,36 @@ export function DealsList() {
                       {deal.status}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/deals/${deal.id}/edit`}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setDeletingDeal(deal)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))}
               {filteredDeals.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={scope === "team" || scope === "agent" ? 11 : 8} className="text-center text-muted-foreground h-24">
+                  <TableCell colSpan={scope === "team" || scope === "agent" ? 12 : 9} className="text-center text-muted-foreground h-24">
                     No deals match your filters
                   </TableCell>
                 </TableRow>
@@ -455,6 +525,30 @@ export function DealsList() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingDeal} onOpenChange={(open) => !open && setDeletingDeal(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Deal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this deal for {deletingDeal?.clientName}?
+              This will permanently remove the deal and all associated commission splits from the system.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteDeal}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
