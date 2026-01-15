@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Everguard IO",
-    template: "%s | Everguard IO",
+    default: "everguard IO",
+    template: "%s | everguard IO",
   },
   description: "Insurance Sales Command Center",
 };

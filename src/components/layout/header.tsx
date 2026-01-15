@@ -47,7 +47,7 @@ export function Header() {
       {/* Mobile Logo */}
       <Link href="/dashboard" className="flex items-center gap-2 lg:hidden">
         <Shield className="h-5 w-5 text-primary" />
-        <span className="font-bold">Everguard.io</span>
+        <span className="font-bold">everguard.io</span>
       </Link>
 
       <div className="flex flex-1 items-center justify-end gap-4">
