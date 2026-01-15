@@ -63,8 +63,6 @@ const defaultCarrier = {
   name: "",
   logo_url: "",
   insurance_types: ["LIFE"] as string[],
-  default_agent_rate: 70,
-  default_manager_rate: 30,
 };
 
 export default function CarriersPage() {
@@ -111,8 +109,6 @@ export default function CarriersPage() {
       name: carrier.name,
       logo_url: carrier.logo_url || "",
       insurance_types: carrier.insurance_types,
-      default_agent_rate: Math.round(carrier.default_agent_rate * 100),
-      default_manager_rate: Math.round(carrier.default_manager_rate * 100),
     });
     setIsDialogOpen(true);
   }
@@ -126,8 +122,6 @@ export default function CarriersPage() {
         name: formData.name,
         logo_url: formData.logo_url || null,
         insurance_types: formData.insurance_types,
-        default_agent_rate: formData.default_agent_rate / 100,
-        default_manager_rate: formData.default_manager_rate / 100,
       };
 
       const url = editingCarrier ? `/api/carriers/${editingCarrier.id}` : "/api/carriers";
@@ -219,7 +213,7 @@ export default function CarriersPage() {
             Carrier Management
           </h1>
           <p className="text-muted-foreground">
-            Manage insurance carriers and default commission rates.
+            Manage insurance carriers.
           </p>
         </div>
 
@@ -235,7 +229,7 @@ export default function CarriersPage() {
               <DialogTitle>{editingCarrier ? "Edit Carrier" : "Add New Carrier"}</DialogTitle>
               <DialogDescription>
                 {editingCarrier
-                  ? "Update carrier information and default rates."
+                  ? "Update carrier information."
                   : "Create a new insurance carrier."}
               </DialogDescription>
             </DialogHeader>
@@ -286,35 +280,6 @@ export default function CarriersPage() {
                       Health
                     </Label>
                   </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="agent_rate">Default Agent Rate (%)</Label>
-                  <Input
-                    id="agent_rate"
-                    type="number"
-                    value={formData.default_agent_rate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, default_agent_rate: parseInt(e.target.value) || 0 })
-                    }
-                    min={0}
-                    max={100}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="manager_rate">Default Manager Rate (%)</Label>
-                  <Input
-                    id="manager_rate"
-                    type="number"
-                    value={formData.default_manager_rate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, default_manager_rate: parseInt(e.target.value) || 0 })
-                    }
-                    min={0}
-                    max={100}
-                  />
                 </div>
               </div>
 
@@ -377,7 +342,6 @@ export default function CarriersPage() {
                 <TableRow>
                   <TableHead>Carrier</TableHead>
                   <TableHead>Types</TableHead>
-                  <TableHead>Default Rates</TableHead>
                   <TableHead>Usage</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-24">Actions</TableHead>
@@ -419,14 +383,6 @@ export default function CarriersPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">
-                        <div>Agent: <span className="font-mono">{Math.round(carrier.default_agent_rate * 100)}%</span></div>
-                        <div className="text-muted-foreground">
-                          Manager: <span className="font-mono">{Math.round(carrier.default_manager_rate * 100)}%</span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
                       <div className="text-sm text-muted-foreground">
                         {carrier._count.commission_rates} rates, {carrier._count.onboarding_progress} agents
                       </div>
@@ -459,7 +415,7 @@ export default function CarriersPage() {
                 ))}
                 {filteredCarriers.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
                       No carriers found
                     </TableCell>
                   </TableRow>
