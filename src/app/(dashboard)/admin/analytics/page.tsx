@@ -44,6 +44,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DateRangeFilter, DateRangePreset, getPresetRange } from "@/components/dashboard/date-range-filter";
+import { useSession } from "@/components/session-provider";
 
 interface TeamConfig {
   id: string;
@@ -227,6 +228,7 @@ function TeamChartTooltip({ active, payload, label, teams }: {
 }
 
 export default function AnalyticsPage() {
+  const { data: session } = useSession();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [chartFilter, setChartFilter] = useState<ChartFilter>("both");
@@ -234,6 +236,9 @@ export default function AnalyticsPage() {
   const [datePreset, setDatePreset] = useState<DateRangePreset>("30days");
   const [dateRange, setDateRange] = useState(() => getPresetRange("30days"));
   const [visibleTeams, setVisibleTeams] = useState<Set<string>>(new Set());
+
+  // Only AO can see owner overrides
+  const canViewOwnerOverrides = session?.user?.role === "AO";
 
   const fetchAnalytics = useCallback(async (range: { from: Date; to: Date }, insuranceType?: string) => {
     setIsLoading(true);
@@ -408,21 +413,23 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Owner Overrides</CardTitle>
-            <TrendingUp className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <div className="text-2xl font-bold font-mono text-amber-600">
-                {formatCurrency(data?.commissionBreakdown?.ownerOverrides || 0)}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {canViewOwnerOverrides && (
+          <Card className="border-l-4 border-l-amber-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Owner Overrides</CardTitle>
+              <TrendingUp className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                <div className="text-2xl font-bold font-mono text-amber-600">
+                  {formatCurrency(data?.commissionBreakdown?.ownerOverrides || 0)}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Stats Cards */}
