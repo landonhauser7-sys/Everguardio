@@ -38,10 +38,15 @@ const managerNavigation = [
   { name: "My Hierarchy", href: "/hierarchy", icon: GitBranch },
 ];
 
-const adminNavigation = [
+// MGA and above can see these
+const mgaNavigation = [
   { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { name: "Commissions", href: "/admin/commissions", icon: Percent },
   { name: "Onboarding", href: "/onboarding", icon: ClipboardList },
+];
+
+// Only AO/PARTNER can see these
+const adminNavigation = [
   { name: "User Management", href: "/admin/users", icon: Users },
   { name: "Manage Teams", href: "/admin/teams", icon: Users2 },
   { name: "Carriers", href: "/admin/carriers", icon: Building2 },
@@ -54,6 +59,8 @@ export function Sidebar() {
 
   // Admin roles: AO, PARTNER
   const isAdmin = ["AO", "PARTNER"].includes(session?.user?.role || "");
+  // MGA and above (can see analytics, commissions, onboarding)
+  const isMGA = ["MGA", "PARTNER", "AO"].includes(session?.user?.role || "");
   // Manager roles: BA and above (can see team and hierarchy)
   const isManager = ["BA", "SA", "GA", "MGA", "PARTNER", "AO"].includes(session?.user?.role || "");
 
@@ -108,7 +115,36 @@ export function Sidebar() {
           );
         })}
 
-        {/* Admin Section */}
+        {/* MGA+ Section (Analytics, Commissions, Onboarding) */}
+        {isMGA && (
+          <>
+            <div className="mt-6 mb-2 px-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Management
+              </p>
+            </div>
+            {mgaNavigation.map((item) => {
+              const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </>
+        )}
+
+        {/* Admin Section (User Management, Teams, Carriers, Announcements) */}
         {isAdmin && (
           <>
             <div className="mt-6 mb-2 px-3">
