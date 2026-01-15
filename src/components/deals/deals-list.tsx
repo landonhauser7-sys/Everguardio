@@ -46,6 +46,10 @@ interface Deal {
   clientName: string;
   clientAge: number | null;
   clientState: string | null;
+  clientPhone: string | null;
+  policyNumber: string | null;
+  draftDate: string | null;
+  leadSource: string | null;
   policyType: string;
   carrierName: string;
   insuranceType: "LIFE" | "HEALTH";
@@ -56,6 +60,16 @@ interface Deal {
   status: string;
   createdAt: string;
 }
+
+const leadSourceLabels: Record<string, string> = {
+  ASCENT_DIALER: "Ascent Dialer",
+  EVERGUARD_DIALER: "Everguard Dialer",
+  FACEBOOK_LEADS: "Facebook Leads",
+  INBOUND: "Inbound",
+  REFERRAL: "Referral",
+  UPSELL: "Upsell",
+  REWRITE: "Rewrite",
+};
 
 const policyTypeLabels: Record<string, string> = {
   TERM: "Term Life",
@@ -244,7 +258,7 @@ export function DealsList() {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Client</TableHead>
-                <TableHead>Policy Type</TableHead>
+                <TableHead>Policy Info</TableHead>
                 <TableHead>Carrier</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead className="text-right">Premium</TableHead>
@@ -264,12 +278,25 @@ export function DealsList() {
                   <TableCell>
                     <div>
                       <div className="font-medium">{deal.clientName}</div>
-                      {deal.clientState && (
-                        <div className="text-xs text-muted-foreground">{deal.clientState}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {[deal.clientState, deal.clientPhone].filter(Boolean).join(" • ")}
+                      </div>
+                      {deal.leadSource && (
+                        <div className="text-xs text-blue-500">{leadSourceLabels[deal.leadSource] || deal.leadSource}</div>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{policyTypeLabels[deal.policyType] || deal.policyType}</TableCell>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{policyTypeLabels[deal.policyType] || deal.policyType}</div>
+                      {deal.policyNumber && (
+                        <div className="text-xs text-muted-foreground">#{deal.policyNumber}</div>
+                      )}
+                      {deal.draftDate && (
+                        <div className="text-xs text-muted-foreground">Draft: {format(parseLocalDate(deal.draftDate), "MMM d")}</div>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{deal.carrierName}</TableCell>
                   <TableCell>
                     <Badge variant={deal.insuranceType === "LIFE" ? "default" : "secondary"}>

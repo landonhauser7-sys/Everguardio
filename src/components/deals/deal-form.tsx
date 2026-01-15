@@ -46,6 +46,16 @@ const usStates = [
   "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
 ];
 
+const leadSources = [
+  { value: "ASCENT_DIALER", label: "Ascent Dialer" },
+  { value: "EVERGUARD_DIALER", label: "Everguard Dialer" },
+  { value: "FACEBOOK_LEADS", label: "Facebook Leads" },
+  { value: "INBOUND", label: "Inbound" },
+  { value: "REFERRAL", label: "Referral" },
+  { value: "UPSELL", label: "Upsell" },
+  { value: "REWRITE", label: "Rewrite" },
+];
+
 interface Carrier {
   id: string;
   name: string;
@@ -62,6 +72,10 @@ export function DealForm() {
     clientName: "",
     clientAge: "",
     clientState: "",
+    clientPhone: "",
+    policyNumber: "",
+    draftDate: "",
+    leadSource: "",
     policyType: "",
     carrierName: "",
     insuranceType: "LIFE",
@@ -157,19 +171,49 @@ export function DealForm() {
               />
             </div>
           </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="clientState">State</Label>
+              <Select
+                value={formData.clientState}
+                onValueChange={(value) => setFormData({ ...formData, clientState: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+                <SelectContent>
+                  {usStates.map((state) => (
+                    <SelectItem key={state} value={state}>
+                      {state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="clientPhone">Phone Number</Label>
+              <Input
+                id="clientPhone"
+                type="tel"
+                value={formData.clientPhone}
+                onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
+                placeholder="(555) 123-4567"
+              />
+            </div>
+          </div>
           <div className="space-y-2">
-            <Label htmlFor="clientState">State</Label>
+            <Label htmlFor="leadSource">Lead Source</Label>
             <Select
-              value={formData.clientState}
-              onValueChange={(value) => setFormData({ ...formData, clientState: value })}
+              value={formData.leadSource}
+              onValueChange={(value) => setFormData({ ...formData, leadSource: value })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select state" />
+                <SelectValue placeholder="How was this lead generated?" />
               </SelectTrigger>
               <SelectContent>
-                {usStates.map((state) => (
-                  <SelectItem key={state} value={state}>
-                    {state}
+                {leadSources.map((source) => (
+                  <SelectItem key={source.value} value={source.value}>
+                    {source.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -241,6 +285,18 @@ export function DealForm() {
               </Select>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="policyNumber">Policy Number</Label>
+              <Input
+                id="policyNumber"
+                value={formData.policyNumber}
+                onChange={(e) => setFormData({ ...formData, policyNumber: e.target.value })}
+                placeholder="POL-123456"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
               <Label htmlFor="applicationDate">Application Date *</Label>
               <Input
                 id="applicationDate"
@@ -248,6 +304,15 @@ export function DealForm() {
                 value={formData.applicationDate}
                 onChange={(e) => setFormData({ ...formData, applicationDate: e.target.value })}
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="draftDate">Draft Date</Label>
+              <Input
+                id="draftDate"
+                type="date"
+                value={formData.draftDate}
+                onChange={(e) => setFormData({ ...formData, draftDate: e.target.value })}
               />
             </div>
           </div>

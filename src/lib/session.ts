@@ -29,8 +29,10 @@ const getCookieName = () => {
 // Decode session from token (plain base64 JSON)
 export function decodeSession(token: string): SessionUser | null {
   try {
+    // First decode URL encoding (handles %3D -> =, etc.)
+    const decodedToken = decodeURIComponent(token);
     // Decode base64 payload
-    const data = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
+    const data = JSON.parse(Buffer.from(decodedToken, "base64").toString("utf-8"));
 
     // Check expiration
     if (data.exp && data.exp < Date.now()) {

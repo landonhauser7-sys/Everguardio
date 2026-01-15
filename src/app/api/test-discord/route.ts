@@ -27,17 +27,19 @@ export async function POST() {
       deal: {
         id: "test-deal-123",
         clientName: "Test Client",
-        annualPremium: 1500,
+        annualPremium: 1000,
         insuranceType: "LIFE",
-        carrierName: "Test Carrier",
+        carrierName: "Ethos",
+        policyType: "TERM",
+        leadSource: "INBOUND",
       },
       agent: {
         id: "test-agent",
-        firstName: "Test",
-        lastName: "Agent",
+        firstName: "Landon",
+        lastName: "Hauser",
       },
       totalAgentDeals: 10,
-      totalDealsToday: 5,
+      totalDealsToday: 3,
     });
 
     return NextResponse.json({

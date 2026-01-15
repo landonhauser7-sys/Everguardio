@@ -75,6 +75,10 @@ model deals {
   client_name                   String
   client_age                    Int?
   client_state                  String?
+  client_phone                  String?
+  policy_number                 String?
+  draft_date                    DateTime?           @db.Date
+  lead_source                   String?
   policy_type                   PolicyType
   carrier_name                  String
   face_amount                   Decimal?            @db.Decimal(15, 2)

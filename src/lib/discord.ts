@@ -7,6 +7,11 @@ const GREEN_COLOR = 0x10b981;
 interface DealInfo {
   id: string;
   clientName: string;
+  clientPhone?: string;
+  policyNumber?: string;
+  policyType?: string;
+  draftDate?: string;
+  leadSource?: string;
   annualPremium: number;
   insuranceType: string;
   carrierName: string;
@@ -47,18 +52,46 @@ export async function sendDiscordSaleNotification(data: NotificationData): Promi
   try {
     const { deal, agent, totalDealsToday } = data;
     const agentName = `${agent.firstName} ${agent.lastName}`;
-    const insuranceType = deal.insuranceType === "LIFE" ? "Life" : "Health";
-    const product = `${insuranceType} • ${deal.carrierName || "N/A"}`;
+
+    // Lead source label
+    const sourceLabels: Record<string, string> = {
+      ASCENT_DIALER: "Ascent Dialer",
+      EVERGUARD_DIALER: "Everguard Dialer",
+      FACEBOOK_LEADS: "Facebook Leads",
+      INBOUND: "Inbound",
+      REFERRAL: "Referral",
+      UPSELL: "Upsell",
+      REWRITE: "Rewrite",
+    };
+    const leadSourceText = deal.leadSource ? sourceLabels[deal.leadSource] || deal.leadSource : "";
+
+    // Policy type labels
+    const policyLabels: Record<string, string> = {
+      TERM: "Term",
+      WHOLE_LIFE: "Whole Life",
+      UNIVERSAL_LIFE: "Universal Life",
+      IUL: "IUL",
+      VUL: "VUL",
+      FINAL_EXPENSE: "Final Expense",
+      ANNUITY: "Annuity",
+      DISABILITY: "Disability",
+      LTC: "LTC",
+      CRITICAL_ILLNESS: "Critical Illness",
+      OTHER: "Other",
+    };
+
+    // Build simple message
+    const lines = [
+      `**${agentName}**${leadSourceText ? ` ${leadSourceText}` : ""}`,
+      `${deal.carrierName}${deal.policyType ? ` ${policyLabels[deal.policyType] || deal.policyType}` : ""}`,
+      `${formatCurrency(deal.annualPremium)} AP`,
+      `${totalDealsToday} x OTD`,
+    ];
 
     const embed = {
-      title: "💰 NEW SALE",
+      title: "Deal Closed 💸🎉",
       color: GREEN_COLOR,
-      fields: [
-        { name: "Agent", value: agentName, inline: false },
-        { name: "Annual Premium", value: formatCurrency(deal.annualPremium), inline: false },
-        { name: "Product", value: product, inline: false },
-        { name: "Daily Total", value: `${totalDealsToday} deals`, inline: false },
-      ],
+      description: lines.join("\n"),
       timestamp: new Date().toISOString(),
     };
 
