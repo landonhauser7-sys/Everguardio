@@ -9,7 +9,7 @@ const createUserSchema = z.object({
   password: z.string().min(8),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
-  role: z.enum(["AGENT", "TEAM_LEADER", "ADMIN"]),
+  role: z.enum(["PRODIGY", "BA", "SA", "GA", "MGA", "PARTNER", "AO"]),
   teamId: z.string().optional(),
   commissionLevel: z.number().min(0).max(200).optional(),
   managerId: z.string().optional(),
@@ -20,7 +20,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !["AO", "PARTNER"].includes(session.user.role || "")) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !["AO", "PARTNER"].includes(session.user.role || "")) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 

@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     }
 
     // Only admins can create events
-    if (session.user.role !== "ADMIN") {
+    if (!["AO", "PARTNER"].includes(session.user.role || "")) {
       return NextResponse.json(
         { message: "Only admins can create calendar events" },
         { status: 403 }

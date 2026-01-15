@@ -237,7 +237,7 @@ model users {
   first_name                               String
   last_name                                String
   display_name                             String?
-  role                                     UserRole              @default(AGENT)
+  role                                     UserRole              @default(PRODIGY)
   status                                   UserStatus            @default(ACTIVE)
   profile_photo_url                        String?
   phone_number                             String?
@@ -356,6 +356,15 @@ enum PolicyType {
 }
 
 enum UserRole {
+  // New roles
+  PRODIGY
+  BA
+  SA
+  GA
+  MGA
+  PARTNER
+  AO
+  // Legacy roles (kept for migration compatibility)
   AGENT
   TEAM_LEADER
   ADMIN

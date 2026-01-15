@@ -21,7 +21,7 @@ export async function POST() {
     }
 
     // Only admins can connect Google Calendar
-    if (session.user.role !== "ADMIN") {
+    if (!["AO", "PARTNER"].includes(session.user.role || "")) {
       return NextResponse.json(
         { message: "Only admins can connect Google Calendar" },
         { status: 403 }

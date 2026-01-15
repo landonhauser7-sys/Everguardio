@@ -2,9 +2,20 @@ import { NextResponse } from "next/server";
 import { getServerSession, authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-// Commission level constants
-const AGENT_LEVEL = 70;
-const MANAGER_LEVEL = 110;
+// Commission level constants for 7-level hierarchy
+// Each level earns 10% override from the level below
+const COMMISSION_LEVELS = {
+  PRODIGY: 70,
+  BA: 80,
+  SA: 90,
+  GA: 100,
+  MGA: 110,
+  PARTNER: 120,
+  AO: 130,
+};
+
+// Manager levels (anyone who can receive overrides)
+const MANAGER_LEVELS = [80, 90, 100, 110, 120]; // BA through Partner
 const OWNER_LEVEL = 130;
 
 export async function GET(request: Request) {
@@ -16,7 +27,7 @@ export async function GET(request: Request) {
     }
 
     // Only allow admin access
-    if (session.user.role !== "ADMIN") {
+    if (!["AO", "PARTNER"].includes(session.user.role || "")) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
@@ -94,7 +105,7 @@ export async function GET(request: Request) {
         id: agentId,
         name: `${agent.first_name} ${agent.last_name}`,
         profilePhotoUrl: agent.profile_photo_url,
-        commissionLevel: agent.commission_level || AGENT_LEVEL,
+        commissionLevel: agent.commission_level || COMMISSION_LEVELS.PRODIGY,
         personalSales: 0,
         personalDeals: 0,
         overrideEarned: 0,
@@ -124,7 +135,7 @@ export async function GET(request: Request) {
           id: split.user_id,
           name: split.user_name,
           profilePhotoUrl: null,
-          commissionLevel: split.role_in_hierarchy === "OWNER" ? OWNER_LEVEL : MANAGER_LEVEL,
+          commissionLevel: split.role_in_hierarchy === "OWNER" ? OWNER_LEVEL : split.commission_level,
           personalSales: 0,
           personalDeals: 0,
           overrideEarned: Number(split.commission_amount),
@@ -152,14 +163,19 @@ export async function GET(request: Request) {
       personalSales: number;
     }> = [];
 
-    // Find all managers (commission_level 110)
+    // Find all managers (BA through Partner - anyone who can receive overrides)
     const managers = await prisma.users.findMany({
-      where: { commission_level: MANAGER_LEVEL },
+      where: {
+        commission_level: {
+          in: MANAGER_LEVELS,
+        },
+      },
       select: {
         id: true,
         first_name: true,
         last_name: true,
         profile_photo_url: true,
+        commission_level: true,
       },
     });
 
@@ -210,8 +226,9 @@ export async function GET(request: Request) {
       );
 
       if (deal) {
-        const agentLevel = deal.users_deals_agent_idTousers.commission_level || AGENT_LEVEL;
-        if (agentLevel === MANAGER_LEVEL) {
+        const agentLevel = deal.users_deals_agent_idTousers.commission_level || COMMISSION_LEVELS.PRODIGY;
+        // If agent is BA or above, count as "from managers", otherwise "from agents"
+        if (agentLevel >= COMMISSION_LEVELS.BA) {
           ownerBreakdown.fromManagers += Number(split.commission_amount);
         } else {
           ownerBreakdown.fromDirectAgents += Number(split.commission_amount);

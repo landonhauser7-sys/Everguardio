@@ -150,7 +150,7 @@ export function DashboardClient({ userName }: { userName: string }) {
     setDateRange(range);
   };
 
-  const isAdmin = data?.role === "ADMIN";
+  const isAdmin = ["AO", "PARTNER"].includes(data?.role || "");
 
   return (
     <div className="space-y-6">
@@ -292,7 +292,7 @@ export function DashboardClient({ userName }: { userName: string }) {
                     </div>
                     {data.commissionBreakdown.teamOverrides > 0 && (
                       <div className="flex justify-between text-blue-600">
-                        <span>Team Overrides (40%)</span>
+                        <span>Team Overrides</span>
                         <span className="font-mono">{formatCurrency(data.commissionBreakdown.teamOverrides)}</span>
                       </div>
                     )}

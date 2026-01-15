@@ -99,7 +99,7 @@ export async function GET(request: Request) {
 
       commissionBreakdown.teamOverrides = teamOverrides;
       commissionBreakdown.total = personalStats.commission + teamOverrides;
-    } else if (commissionLevel === OWNER_LEVEL || userRole === "ADMIN") {
+    } else if (commissionLevel === OWNER_LEVEL || ["AO", "PARTNER"].includes(userRole || "")) {
       // Owner/Admin: show agent overrides and manager overrides separately
       const ownerSplits = userCommissionSplits.filter(s => s.role_in_hierarchy === "OWNER");
 
@@ -186,7 +186,7 @@ export async function GET(request: Request) {
 
     // Agency stats for admin
     let agency = null;
-    if (userRole === "ADMIN") {
+    if (["AO", "PARTNER"].includes(userRole || "")) {
       const totalCommissionPool = allDeals.reduce((sum, d) => sum + Number(d.total_commission_pool || 0), 0);
       const agentCommissions = allDeals.reduce((sum, d) => sum + Number(d.agent_commission || d.commission_amount), 0);
       const managerOverrides = allDeals.reduce((sum, d) => sum + Number(d.manager_override || 0), 0);
@@ -208,7 +208,7 @@ export async function GET(request: Request) {
     }
 
     // Production chart data - daily breakdown for last 30 days
-    const chartDeals = userRole === "ADMIN" ? allDeals : personalDeals;
+    const chartDeals = ["AO", "PARTNER"].includes(userRole || "") ? allDeals : personalDeals;
     const chartDataMap = new Map<string, { date: string; life: number; health: number }>();
 
     // Initialize all days in the range

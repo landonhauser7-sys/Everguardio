@@ -11,7 +11,9 @@ import {
   Building2,
   UserCheck,
   ChevronRight,
+  Search,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -93,20 +95,36 @@ function formatCurrency(amount: number) {
 function getLevelLabel(level: number): string {
   switch (level) {
     case 130:
-      return "Owner (130%)";
+      return "AO";
+    case 120:
+      return "Partner";
     case 110:
-      return "Manager (110%)";
+      return "MGA";
+    case 100:
+      return "GA";
+    case 90:
+      return "SA";
+    case 80:
+      return "BA";
     default:
-      return "Agent (70%)";
+      return "Prodigy";
   }
 }
 
 function getLevelBadgeColor(level: number): string {
   switch (level) {
     case 130:
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    case 120:
       return "bg-purple-100 text-purple-800 border-purple-200";
     case 110:
+      return "bg-violet-100 text-violet-800 border-violet-200";
+    case 100:
       return "bg-blue-100 text-blue-800 border-blue-200";
+    case 90:
+      return "bg-cyan-100 text-cyan-800 border-cyan-200";
+    case 80:
+      return "bg-teal-100 text-teal-800 border-teal-200";
     default:
       return "bg-green-100 text-green-800 border-green-200";
   }
@@ -117,6 +135,7 @@ export default function CommissionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [datePreset, setDatePreset] = useState<DateRangePreset>("thisMonth");
   const [dateRange, setDateRange] = useState(() => getPresetRange("thisMonth"));
+  const [agentSearch, setAgentSearch] = useState("");
 
   const fetchCommissions = useCallback(async (range: { from: Date; to: Date }) => {
     setIsLoading(true);
@@ -180,7 +199,7 @@ export default function CommissionsPage() {
             Commission Reports
           </h1>
           <p className="text-muted-foreground">
-            70/110/130 commission split tracking — {presetLabels[datePreset]}
+            7-level hierarchy commission tracking — {presetLabels[datePreset]}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -221,7 +240,7 @@ export default function CommissionsPage() {
 
         <Card className="border-l-4 border-l-green-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Agent Commissions (70%)</CardTitle>
+            <CardTitle className="text-sm font-medium">Agent Commissions</CardTitle>
             <Users className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
@@ -244,7 +263,7 @@ export default function CommissionsPage() {
 
         <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Manager Overrides (40%)</CardTitle>
+            <CardTitle className="text-sm font-medium">Manager Overrides</CardTitle>
             <UserCheck className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -267,7 +286,7 @@ export default function CommissionsPage() {
 
         <Card className="border-l-4 border-l-purple-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Owner Overrides (20%)</CardTitle>
+            <CardTitle className="text-sm font-medium">Owner Overrides</CardTitle>
             <Building2 className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
@@ -292,13 +311,26 @@ export default function CommissionsPage() {
       {/* Agent Breakdown Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Agent Breakdown
-          </CardTitle>
-          <CardDescription>
-            Individual commission earnings and override income
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Agent Breakdown
+              </CardTitle>
+              <CardDescription>
+                Individual commission earnings and override income
+              </CardDescription>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search agents..."
+                value={agentSearch}
+                onChange={(e) => setAgentSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -324,7 +356,11 @@ export default function CommissionsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.agentBreakdown.map((agent) => {
+                  {data.agentBreakdown
+                    .filter((agent) =>
+                      agent.name.toLowerCase().includes(agentSearch.toLowerCase())
+                    )
+                    .map((agent) => {
                     const initials = agent.name.split(" ").map(n => n[0]).join("");
                     return (
                       <tr key={agent.id} className="border-b transition-colors hover:bg-muted/50">
@@ -374,154 +410,99 @@ export default function CommissionsPage() {
                   })}
                 </tbody>
               </table>
+              {data.agentBreakdown.filter((agent) =>
+                agent.name.toLowerCase().includes(agentSearch.toLowerCase())
+              ).length === 0 && agentSearch && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No agents found matching &quot;{agentSearch}&quot;
+                </div>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Manager and Owner Breakdown */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Manager Override Breakdown */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCheck className="h-5 w-5 text-blue-600" />
-              Manager Override Breakdown
-            </CardTitle>
-            <CardDescription>
-              Override earnings from team agent production
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-20 w-full" />
-                ))}
-              </div>
-            ) : !data || data.managerBreakdown.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No managers with override earnings
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {data.managerBreakdown.map((manager) => {
-                  const initials = manager.name.split(" ").map(n => n[0]).join("");
-                  return (
-                    <div
-                      key={manager.id}
-                      className="flex items-center justify-between p-4 rounded-lg border"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={manager.profilePhotoUrl || undefined} />
-                          <AvatarFallback>{initials}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{manager.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {manager.teamAgents} agents • {manager.teamDeals} team deals
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-mono font-bold text-blue-600">
-                          {formatCurrency(manager.overrideEarned)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Override earned
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Owner Override Breakdown */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-purple-600" />
-              Owner Override Breakdown
-            </CardTitle>
-            <CardDescription>
-              Override earnings by source
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-24 w-full" />
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-lg border bg-muted/30">
-                    <div className="text-sm text-muted-foreground mb-1">
-                      From Managers (20%)
-                    </div>
-                    <div className="text-2xl font-bold font-mono text-purple-600">
-                      {formatCurrency(data?.ownerBreakdown.fromManagers || 0)}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Manager personal sales
-                    </div>
+      {/* Owner Override Breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-purple-600" />
+            Owner Override Breakdown
+          </CardTitle>
+          <CardDescription>
+            Override earnings by source
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-24 w-full" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <div className="text-sm text-muted-foreground mb-1">
+                    From Managers
                   </div>
-                  <div className="p-4 rounded-lg border bg-muted/30">
-                    <div className="text-sm text-muted-foreground mb-1">
-                      From Agents (20-60%)
-                    </div>
-                    <div className="text-2xl font-bold font-mono text-purple-600">
-                      {formatCurrency(data?.ownerBreakdown.fromDirectAgents || 0)}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Agent production
-                    </div>
+                  <div className="text-2xl font-bold font-mono text-purple-600">
+                    {formatCurrency(data?.ownerBreakdown.fromManagers || 0)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    BA through Partner sales
                   </div>
                 </div>
-
-                <div className="p-4 rounded-lg border-2 border-purple-200 bg-purple-50 dark:bg-purple-950/20">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-medium text-purple-800 dark:text-purple-300">
-                        Total Owner Overrides
-                      </div>
-                      <div className="text-xs text-purple-600 dark:text-purple-400">
-                        All override income
-                      </div>
-                    </div>
-                    <div className="text-3xl font-bold font-mono text-purple-700 dark:text-purple-300">
-                      {formatCurrency(data?.ownerBreakdown.totalOverrides || 0)}
-                    </div>
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <div className="text-sm text-muted-foreground mb-1">
+                    From Agents
                   </div>
-                </div>
-
-                {/* Commission Flow Explanation */}
-                <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                  <div className="text-sm font-medium">Commission Flow</div>
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <div className="flex items-center gap-2">
-                      <ChevronRight className="h-3 w-3" />
-                      <span>Agent sells policy: Agent 70%, Manager 40%, Owner 20%</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <ChevronRight className="h-3 w-3" />
-                      <span>Manager sells personally: Manager 110%, Owner 20%</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <ChevronRight className="h-3 w-3" />
-                      <span>Owner sells personally: Owner 130% (no overrides)</span>
-                    </div>
+                  <div className="text-2xl font-bold font-mono text-purple-600">
+                    {formatCurrency(data?.ownerBreakdown.fromDirectAgents || 0)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Prodigy production
                   </div>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+
+              <div className="p-4 rounded-lg border-2 border-purple-200 bg-purple-50 dark:bg-purple-950/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-purple-800 dark:text-purple-300">
+                      Total Owner Overrides
+                    </div>
+                    <div className="text-xs text-purple-600 dark:text-purple-400">
+                      All override income
+                    </div>
+                  </div>
+                  <div className="text-3xl font-bold font-mono text-purple-700 dark:text-purple-300">
+                    {formatCurrency(data?.ownerBreakdown.totalOverrides || 0)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Commission Flow Explanation */}
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <div className="text-sm font-medium">7-Level Commission Hierarchy</div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="flex items-center gap-2">
+                    <ChevronRight className="h-3 w-3" />
+                    <span>Each level earns 10% override from the level below</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ChevronRight className="h-3 w-3" />
+                    <span>Prodigy 70% → BA 80% → SA 90% → GA 100%</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ChevronRight className="h-3 w-3" />
+                    <span>GA 100% → MGA 110% → Partner 120% → AO 130%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

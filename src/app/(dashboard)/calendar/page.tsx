@@ -107,7 +107,7 @@ export default function CalendarPage() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const isAdmin = session?.user?.role === "ADMIN";
+  const isAdmin = ["AO", "PARTNER"].includes(session?.user?.role || "");
 
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);

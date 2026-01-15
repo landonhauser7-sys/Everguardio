@@ -461,7 +461,7 @@ export default function SettingsPage() {
             <div>
               <Label className="text-muted-foreground">Role</Label>
               <div className="mt-1">
-                <Badge variant={session?.user?.role === "ADMIN" ? "destructive" : "default"}>
+                <Badge variant={["AO", "PARTNER"].includes(session?.user?.role || "") ? "destructive" : "default"}>
                   {session?.user?.role?.replace("_", " ") || "Agent"}
                 </Badge>
               </div>

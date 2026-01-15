@@ -84,15 +84,15 @@ export default function UserManagementPage() {
     password: "",
     firstName: "",
     lastName: "",
-    role: "AGENT",
+    role: "PRODIGY",
     commissionLevel: 70,
     managerId: "",
     teamId: "",
   });
 
-  // Get managers (TEAM_LEADER or ADMIN roles) for selection
+  // Get managers (GA and above) for selection
   const managers = users.filter(
-    (u) => u.role === "TEAM_LEADER" || u.role === "ADMIN"
+    (u) => ["GA", "MGA", "PARTNER", "AO"].includes(u.role)
   );
 
   useEffect(() => {
@@ -153,7 +153,7 @@ export default function UserManagementPage() {
         password: "",
         firstName: "",
         lastName: "",
-        role: "AGENT",
+        role: "PRODIGY",
         commissionLevel: 70,
         managerId: "",
         teamId: "",
@@ -209,28 +209,25 @@ export default function UserManagementPage() {
     }
   }
 
+  // Role to commission level mapping
+  const roleCommissionMap: Record<string, number> = {
+    PRODIGY: 70,
+    BA: 80,
+    SA: 90,
+    GA: 100,
+    MGA: 110,
+    PARTNER: 120,
+    AO: 130,
+  };
+
   // Auto-set commission level based on role
   function handleRoleChange(role: string) {
-    let commissionLevel = editForm.commissionLevel;
-    if (role === "AGENT") {
-      commissionLevel = 70;
-    } else if (role === "TEAM_LEADER") {
-      commissionLevel = 90;
-    } else if (role === "ADMIN") {
-      commissionLevel = 130;
-    }
+    const commissionLevel = roleCommissionMap[role] || editForm.commissionLevel;
     setEditForm({ ...editForm, role, commissionLevel });
   }
 
   function handleNewUserRoleChange(role: string) {
-    let commissionLevel = newUser.commissionLevel;
-    if (role === "AGENT") {
-      commissionLevel = 70;
-    } else if (role === "TEAM_LEADER") {
-      commissionLevel = 90;
-    } else if (role === "ADMIN") {
-      commissionLevel = 130;
-    }
+    const commissionLevel = roleCommissionMap[role] || newUser.commissionLevel;
     setNewUser({ ...newUser, role, commissionLevel });
   }
 
@@ -242,9 +239,11 @@ export default function UserManagementPage() {
 
   const getRoleBadgeVariant = (role: string): "default" | "secondary" | "destructive" => {
     switch (role) {
-      case "ADMIN":
+      case "AO":
+      case "PARTNER":
         return "destructive";
-      case "TEAM_LEADER":
+      case "MGA":
+      case "GA":
         return "default";
       default:
         return "secondary";
@@ -253,7 +252,9 @@ export default function UserManagementPage() {
 
   const getCommissionColor = (level: number) => {
     if (level >= 130) return "text-amber-500";
-    if (level >= 110) return "text-blue-500";
+    if (level >= 110) return "text-purple-500";
+    if (level >= 100) return "text-blue-500";
+    if (level >= 90) return "text-green-500";
     return "text-gray-400";
   };
 
@@ -337,9 +338,13 @@ export default function UserManagementPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="AGENT">Agent (70%)</SelectItem>
-                      <SelectItem value="TEAM_LEADER">Manager (90%)</SelectItem>
-                      <SelectItem value="ADMIN">Admin/Owner (130%)</SelectItem>
+                      <SelectItem value="PRODIGY">Prodigy (70%)</SelectItem>
+                      <SelectItem value="BA">BA (80%)</SelectItem>
+                      <SelectItem value="SA">SA (90%)</SelectItem>
+                      <SelectItem value="GA">GA (100%)</SelectItem>
+                      <SelectItem value="MGA">MGA (110%)</SelectItem>
+                      <SelectItem value="PARTNER">Partner (120%)</SelectItem>
+                      <SelectItem value="AO">AO (130%)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -371,7 +376,7 @@ export default function UserManagementPage() {
                         <SelectItem key={manager.id} value={manager.id}>
                           {manager.firstName} {manager.lastName}
                           <span className="ml-2 text-xs text-muted-foreground">
-                            ({manager.role === "ADMIN" ? "Owner" : "Manager"})
+                            ({manager.role})
                           </span>
                         </SelectItem>
                       ))}
@@ -557,9 +562,13 @@ export default function UserManagementPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="AGENT">Agent (70%)</SelectItem>
-                      <SelectItem value="TEAM_LEADER">Manager (90%)</SelectItem>
-                      <SelectItem value="ADMIN">Admin/Owner (130%)</SelectItem>
+                      <SelectItem value="PRODIGY">Prodigy (70%)</SelectItem>
+                      <SelectItem value="BA">BA (80%)</SelectItem>
+                      <SelectItem value="SA">SA (90%)</SelectItem>
+                      <SelectItem value="GA">GA (100%)</SelectItem>
+                      <SelectItem value="MGA">MGA (110%)</SelectItem>
+                      <SelectItem value="PARTNER">Partner (120%)</SelectItem>
+                      <SelectItem value="AO">AO (130%)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -610,7 +619,7 @@ export default function UserManagementPage() {
                           <SelectItem key={manager.id} value={manager.id}>
                             {manager.firstName} {manager.lastName}
                             <span className="ml-2 text-xs text-muted-foreground">
-                              ({manager.role === "ADMIN" ? "Owner" : "Manager"})
+                              ({manager.role})
                             </span>
                           </SelectItem>
                         ))}
@@ -642,9 +651,13 @@ export default function UserManagementPage() {
               <div className="bg-muted/50 rounded-lg p-3 text-sm">
                 <p className="font-medium mb-1">Commission Structure:</p>
                 <ul className="text-muted-foreground space-y-1">
-                  <li>• <span className="text-gray-400">Agent (70%)</span> - Base commission level</li>
-                  <li>• <span className="text-blue-500">Manager (90%)</span> - Gets 20% override on team sales</li>
-                  <li>• <span className="text-amber-500">Owner (130%)</span> - Gets 20% override on all sales</li>
+                  <li>• <span className="text-gray-400">Prodigy (70%)</span> - Entry level</li>
+                  <li>• <span className="text-gray-400">BA (80%)</span> - Business Associate</li>
+                  <li>• <span className="text-green-500">SA (90%)</span> - Senior Associate</li>
+                  <li>• <span className="text-blue-500">GA (100%)</span> - General Agent</li>
+                  <li>• <span className="text-purple-500">MGA (110%)</span> - Managing General Agent</li>
+                  <li>• <span className="text-purple-500">Partner (120%)</span> - Partner level</li>
+                  <li>• <span className="text-amber-500">AO (130%)</span> - Agency Owner</li>
                 </ul>
               </div>
             </div>

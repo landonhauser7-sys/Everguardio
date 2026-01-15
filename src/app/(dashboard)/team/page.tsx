@@ -12,14 +12,50 @@ import {
   Shield,
   Heart,
   Target,
+  Settings,
+  Save,
+  Loader2,
+  Palette,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateRangeFilter, DateRangePreset, getPresetRange } from "@/components/dashboard/date-range-filter";
+import { useSession } from "@/components/session-provider";
+
+// Common team emojis
+const TEAM_EMOJIS = ["🔥", "⚡", "🚀", "💪", "🏆", "⭐", "💎", "🦁", "🐺", "🦅", "🎯", "💰", "👑", "🌟", "🔱", "⚔️"];
+
+// Team color options
+const TEAM_COLORS = [
+  { name: "Red", value: "#EF4444" },
+  { name: "Orange", value: "#F97316" },
+  { name: "Amber", value: "#F59E0B" },
+  { name: "Yellow", value: "#EAB308" },
+  { name: "Lime", value: "#84CC16" },
+  { name: "Green", value: "#22C55E" },
+  { name: "Emerald", value: "#10B981" },
+  { name: "Teal", value: "#14B8A6" },
+  { name: "Cyan", value: "#06B6D4" },
+  { name: "Sky", value: "#0EA5E9" },
+  { name: "Blue", value: "#3B82F6" },
+  { name: "Indigo", value: "#6366F1" },
+  { name: "Violet", value: "#8B5CF6" },
+  { name: "Purple", value: "#A855F7" },
+  { name: "Fuchsia", value: "#D946EF" },
+  { name: "Pink", value: "#EC4899" },
+];
+
+// Manager roles that can edit team settings
+const MANAGER_ROLES = ["BA", "SA", "GA", "MGA", "PARTNER", "AO"];
 
 interface TeamMember {
   id: string;
@@ -103,9 +139,11 @@ function formatTimeAgo(dateString: string) {
 
 function getRoleBadgeVariant(role: string) {
   switch (role) {
-    case "ADMIN":
+    case "AO":
+    case "PARTNER":
       return "default" as const;
-    case "TEAM_LEADER":
+    case "GA":
+    case "MGA":
       return "secondary" as const;
     default:
       return "outline" as const;
@@ -124,10 +162,24 @@ const presetLabels: Record<DateRangePreset, string> = {
 };
 
 export default function TeamPage() {
+  const { data: session } = useSession();
   const [data, setData] = useState<TeamData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [datePreset, setDatePreset] = useState<DateRangePreset>("30days");
   const [dateRange, setDateRange] = useState(() => getPresetRange("30days"));
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Team settings form state
+  const [teamSettings, setTeamSettings] = useState({
+    name: "",
+    emoji: "",
+    color: "",
+    monthlyDealGoal: "",
+    monthlyPremiumGoal: "",
+  });
+
+  const isManager = MANAGER_ROLES.includes(session?.user?.role || "");
 
   const fetchTeamData = useCallback(async (range: { from: Date; to: Date }) => {
     setIsLoading(true);
@@ -140,6 +192,16 @@ export default function TeamPage() {
       if (response.ok) {
         const result = await response.json();
         setData(result);
+        // Initialize settings form with current values
+        if (result.team) {
+          setTeamSettings({
+            name: result.team.name || "",
+            emoji: result.team.emoji || "",
+            color: result.team.color || "",
+            monthlyDealGoal: result.team.monthlyDealGoal?.toString() || "",
+            monthlyPremiumGoal: result.team.monthlyPremiumGoal?.toString() || "",
+          });
+        }
       }
     } catch (error) {
       console.error("Error fetching team data:", error);
@@ -155,6 +217,36 @@ export default function TeamPage() {
   const handleDateRangeChange = (preset: DateRangePreset, range: { from: Date; to: Date }) => {
     setDatePreset(preset);
     setDateRange(range);
+  };
+
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/team", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: teamSettings.name,
+          emoji: teamSettings.emoji || null,
+          color: teamSettings.color || null,
+          monthlyDealGoal: teamSettings.monthlyDealGoal ? parseInt(teamSettings.monthlyDealGoal) : null,
+          monthlyPremiumGoal: teamSettings.monthlyPremiumGoal ? parseInt(teamSettings.monthlyPremiumGoal) : null,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update team");
+      }
+
+      const updatedTeam = await response.json();
+      setData((prev) => prev ? { ...prev, team: updatedTeam } : prev);
+      toast.success("Team settings updated");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update team");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!isLoading && !data?.team) {
@@ -195,12 +287,31 @@ export default function TeamPage() {
             {data?.memberCount || 0} members — {presetLabels[datePreset]}
           </p>
         </div>
-        <DateRangeFilter
-          value={datePreset}
-          customRange={datePreset === "custom" ? dateRange : undefined}
-          onChange={handleDateRangeChange}
-        />
+        {activeTab === "overview" && (
+          <DateRangeFilter
+            value={datePreset}
+            customRange={datePreset === "custom" ? dateRange : undefined}
+            onChange={handleDateRangeChange}
+          />
+        )}
       </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="overview" className="gap-2">
+            <Users className="h-4 w-4" />
+            Overview
+          </TabsTrigger>
+          {isManager && (
+            <TabsTrigger value="settings" className="gap-2">
+              <Settings className="h-4 w-4" />
+              Team Settings
+            </TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6 mt-6">
 
       {/* Team Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -246,7 +357,7 @@ export default function TeamPage() {
                   {formatCurrency(data?.stats?.managerOverrides || 0)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  From {data?.stats?.teamDealsCount || 0} team deals (20%)
+                  From {data?.stats?.teamDealsCount || 0} team deals
                 </p>
               </>
             )}
@@ -384,7 +495,7 @@ export default function TeamPage() {
                           {member.firstName} {member.lastName}
                         </p>
                         <Badge variant={getRoleBadgeVariant(member.role)} className="text-xs">
-                          {member.role === "TEAM_LEADER" ? "Manager" : member.role === "ADMIN" ? "Owner" : "Agent"}
+                          {member.role}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -478,6 +589,171 @@ export default function TeamPage() {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+
+        {/* Settings Tab */}
+        {isManager && (
+          <TabsContent value="settings" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5" />
+                  Team Appearance
+                </CardTitle>
+                <CardDescription>
+                  Customize your team&apos;s name, emoji, and color
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Team Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="teamName">Team Name</Label>
+                  <Input
+                    id="teamName"
+                    value={teamSettings.name}
+                    onChange={(e) => setTeamSettings({ ...teamSettings, name: e.target.value })}
+                    placeholder="Enter team name"
+                  />
+                </div>
+
+                {/* Emoji Picker */}
+                <div className="space-y-2">
+                  <Label>Team Emoji</Label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTeamSettings({ ...teamSettings, emoji: "" })}
+                      className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-sm ${
+                        !teamSettings.emoji
+                          ? "border-primary bg-primary/10"
+                          : "border-muted hover:border-primary/50"
+                      }`}
+                    >
+                      None
+                    </button>
+                    {TEAM_EMOJIS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => setTeamSettings({ ...teamSettings, emoji })}
+                        className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xl ${
+                          teamSettings.emoji === emoji
+                            ? "border-primary bg-primary/10"
+                            : "border-muted hover:border-primary/50"
+                        }`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Color Picker */}
+                <div className="space-y-2">
+                  <Label>Team Color</Label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTeamSettings({ ...teamSettings, color: "" })}
+                      className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xs ${
+                        !teamSettings.color
+                          ? "border-primary bg-primary/10"
+                          : "border-muted hover:border-primary/50"
+                      }`}
+                    >
+                      Auto
+                    </button>
+                    {TEAM_COLORS.map((color) => (
+                      <button
+                        key={color.value}
+                        type="button"
+                        onClick={() => setTeamSettings({ ...teamSettings, color: color.value })}
+                        className={`w-10 h-10 rounded-lg border-2 ${
+                          teamSettings.color === color.value
+                            ? "border-primary ring-2 ring-primary ring-offset-2"
+                            : "border-transparent hover:scale-110"
+                        }`}
+                        style={{ backgroundColor: color.value }}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <Label className="text-xs text-muted-foreground mb-2 block">Preview</Label>
+                  <div className="flex items-center gap-3">
+                    {teamSettings.emoji && (
+                      <span className="text-3xl">{teamSettings.emoji}</span>
+                    )}
+                    <span
+                      className="text-xl font-bold"
+                      style={{ color: teamSettings.color || undefined }}
+                    >
+                      {teamSettings.name || "Team Name"}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Team Goals */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Monthly Goals
+                </CardTitle>
+                <CardDescription>
+                  Set monthly targets for your team
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="dealGoal">Monthly Deal Goal</Label>
+                    <Input
+                      id="dealGoal"
+                      type="number"
+                      value={teamSettings.monthlyDealGoal}
+                      onChange={(e) => setTeamSettings({ ...teamSettings, monthlyDealGoal: e.target.value })}
+                      placeholder="e.g., 50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="premiumGoal">Monthly Premium Goal ($)</Label>
+                    <Input
+                      id="premiumGoal"
+                      type="number"
+                      value={teamSettings.monthlyPremiumGoal}
+                      onChange={(e) => setTeamSettings({ ...teamSettings, monthlyPremiumGoal: e.target.value })}
+                      placeholder="e.g., 150000"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Save Button */}
+            <div className="flex justify-end">
+              <Button onClick={handleSaveSettings} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }

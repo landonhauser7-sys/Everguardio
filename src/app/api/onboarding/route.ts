@@ -11,8 +11,8 @@ export async function GET() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const isAdmin = session.user.role === "ADMIN";
-    const isManager = session.user.role === "TEAM_LEADER";
+    const isAdmin = ["AO", "PARTNER"].includes(session.user.role || "");
+    const isManager = ["GA", "MGA", "PARTNER", "AO"].includes(session.user.role || "");
 
     // Get all active carriers for the columns
     const carriers = await prisma.carriers.findMany({
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !["AO", "PARTNER"].includes(session.user.role || "")) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -250,8 +250,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Check permissions
-    const isAdmin = session.user.role === "ADMIN";
-    const isManager = session.user.role === "TEAM_LEADER";
+    const isAdmin = ["AO", "PARTNER"].includes(session.user.role || "");
+    const isManager = ["GA", "MGA", "PARTNER", "AO"].includes(session.user.role || "");
 
     if (!isAdmin && !isManager && session.user.id !== userId) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });

@@ -17,6 +17,7 @@ import {
   Users2,
   ClipboardList,
   CalendarDays,
+  GitBranch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ const navigation = [
 
 const managerNavigation = [
   { name: "Team", href: "/team", icon: Users },
+  { name: "My Hierarchy", href: "/hierarchy", icon: GitBranch },
 ];
 
 const adminNavigation = [
@@ -47,8 +49,10 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
 
-  const isAdmin = session?.user?.role === "ADMIN";
-  const isManager = session?.user?.role === "TEAM_LEADER";
+  // Admin roles: AO, PARTNER
+  const isAdmin = ["AO", "PARTNER"].includes(session?.user?.role || "");
+  // Manager roles: BA and above (can see team and hierarchy)
+  const isManager = ["BA", "SA", "GA", "MGA", "PARTNER", "AO"].includes(session?.user?.role || "");
 
   return (
     <div className="flex h-full w-64 flex-col bg-card border-r">

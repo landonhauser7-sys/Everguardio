@@ -13,7 +13,7 @@ export async function POST(
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role !== "ADMIN") {
+    if (!["AO", "PARTNER"].includes(session.user.role || "")) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
@@ -55,7 +55,7 @@ export async function DELETE(
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role !== "ADMIN") {
+    if (!["AO", "PARTNER"].includes(session.user.role || "")) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 

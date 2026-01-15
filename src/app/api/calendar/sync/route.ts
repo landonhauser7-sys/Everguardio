@@ -84,7 +84,7 @@ export async function POST() {
     }
 
     // Only admins can sync
-    if (session.user.role !== "ADMIN") {
+    if (!["AO", "PARTNER"].includes(session.user.role || "")) {
       return NextResponse.json(
         { message: "Only admins can sync calendar" },
         { status: 403 }

@@ -16,7 +16,7 @@ export async function GET(
     const { id } = await params;
 
     // Users can view their own profile, admins can view anyone
-    if (session.user.role !== "ADMIN" && session.user.id !== id) {
+    if (!["AO", "PARTNER"].includes(session.user.role || "") && session.user.id !== id) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
@@ -102,7 +102,7 @@ export async function PATCH(
     const { id } = await params;
 
     // Only admins can update other users
-    if (session.user.role !== "ADMIN" && session.user.id !== id) {
+    if (!["AO", "PARTNER"].includes(session.user.role || "") && session.user.id !== id) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
@@ -122,7 +122,7 @@ export async function PATCH(
     } = body;
 
     // Non-admins can only update certain fields
-    const isAdmin = session.user.role === "ADMIN";
+    const isAdmin = ["AO", "PARTNER"].includes(session.user.role || "");
 
     const updateData: Record<string, unknown> = {
       updated_at: new Date(),
@@ -167,7 +167,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !["AO", "PARTNER"].includes(session.user.role || "")) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 

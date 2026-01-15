@@ -1,6 +1,18 @@
 import { NextResponse } from "next/server";
 import { getServerSession, authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { z } from "zod";
+
+// Manager roles that can edit team settings
+const MANAGER_ROLES = ["BA", "SA", "GA", "MGA", "PARTNER", "AO"];
+
+const teamUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  emoji: z.string().optional().nullable(),
+  color: z.string().optional().nullable(),
+  monthlyDealGoal: z.number().optional().nullable(),
+  monthlyPremiumGoal: z.number().optional().nullable(),
+});
 
 export async function GET(request: Request) {
   try {
@@ -222,5 +234,69 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Error fetching team data:", error);
     return NextResponse.json({ message: "Failed to fetch team data" }, { status: 500 });
+  }
+}
+
+// PATCH - Update team settings (for managers)
+export async function PATCH(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get current user and their team
+    const currentUser = await prisma.users.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        team_id: true,
+        role: true,
+        commission_level: true,
+      },
+    });
+
+    if (!currentUser?.team_id) {
+      return NextResponse.json({ message: "You are not assigned to a team" }, { status: 400 });
+    }
+
+    // Check if user is a manager (BA or above)
+    if (!MANAGER_ROLES.includes(currentUser.role)) {
+      return NextResponse.json({ message: "Only managers can edit team settings" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const validatedData = teamUpdateSchema.parse(body);
+
+    // Update team
+    const updatedTeam = await prisma.teams.update({
+      where: { id: currentUser.team_id },
+      data: {
+        ...(validatedData.name !== undefined && { name: validatedData.name }),
+        ...(validatedData.emoji !== undefined && { emoji: validatedData.emoji }),
+        ...(validatedData.color !== undefined && { color: validatedData.color }),
+        ...(validatedData.monthlyDealGoal !== undefined && { monthly_deal_goal: validatedData.monthlyDealGoal }),
+        ...(validatedData.monthlyPremiumGoal !== undefined && { monthly_premium_goal: validatedData.monthlyPremiumGoal }),
+        updated_at: new Date(),
+      },
+    });
+
+    return NextResponse.json({
+      id: updatedTeam.id,
+      name: updatedTeam.name,
+      emoji: updatedTeam.emoji,
+      color: updatedTeam.color,
+      monthlyDealGoal: updatedTeam.monthly_deal_goal,
+      monthlyPremiumGoal: updatedTeam.monthly_premium_goal ? Number(updatedTeam.monthly_premium_goal) : null,
+    });
+  } catch (error) {
+    console.error("Error updating team:", error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ message: error.issues[0].message }, { status: 400 });
+    }
+
+    return NextResponse.json({ message: "Failed to update team" }, { status: 500 });
   }
 }

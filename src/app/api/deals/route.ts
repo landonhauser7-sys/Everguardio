@@ -21,10 +21,19 @@ const dealSchema = z.object({
   notes: z.string().optional(),
 });
 
-// Commission level constants
-const AGENT_LEVEL = 70;
-const MANAGER_LEVEL = 90;
-const OWNER_LEVEL = 130;
+// Commission level constants - each level is 10% apart
+const COMMISSION_LEVELS: Record<string, number> = {
+  PRODIGY: 70,
+  BA: 80,
+  SA: 90,
+  GA: 100,
+  MGA: 110,
+  PARTNER: 120,
+  AO: 130,
+};
+
+const AO_LEVEL = 130;
+const OVERRIDE_PER_LEVEL = 10; // Each level earns 10% override
 
 interface CommissionSplit {
   userId: string;
@@ -35,124 +44,142 @@ interface CommissionSplit {
   isOverride: boolean;
 }
 
+interface UplineUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  commissionLevel: number;
+  role: string;
+  uplineId: string | null;
+}
+
 /**
- * Calculate commission splits based on the 70/110/130 system
+ * Calculate commission splits based on the 7-level hierarchy
  *
- * Agent (70%): Gets 70% of base commission
- * Manager (110%): Gets 40% override (110% - 70%)
- * Owner (130%): Gets 20% override (130% - 110%)
+ * Each level earns 10% override from the level below:
+ * - Prodigy (70%) - base agent
+ * - BA (80%) - 10% override from Prodigy
+ * - SA (90%) - 10% override from BA
+ * - GA (100%) - 10% override from SA
+ * - MGA (110%) - 10% override from GA
+ * - Partner (120%) - 10% override from MGA
+ * - AO (130%) - 10% override from Partner
  *
- * Special cases:
- * - Manager selling personally: Gets 110%, owner gets 20%
- * - Owner selling personally: Gets full 130%
+ * Total pool is always 130% (all overrides combined)
  */
 function calculateCommissionSplits(
   baseCommission: number,
-  agent: { id: string; firstName: string; lastName: string; commissionLevel: number },
-  manager: { id: string; firstName: string; lastName: string } | null,
-  owner: { id: string; firstName: string; lastName: string } | null
+  agent: UplineUser,
+  uplineChain: UplineUser[]
 ): {
   agentCommission: number;
-  managerOverride: number;
-  ownerOverride: number;
+  totalOverrides: number;
   totalCommissionPool: number;
   splits: CommissionSplit[];
 } {
   const splits: CommissionSplit[] = [];
-  let agentCommission = 0;
-  let managerOverride = 0;
-  let ownerOverride = 0;
 
-  // Total commission pool is always 130% of base
-  const totalCommissionPool = baseCommission * (OWNER_LEVEL / 100);
+  // Agent gets their commission level percentage
+  const agentCommission = baseCommission * (agent.commissionLevel / 100);
+  splits.push({
+    userId: agent.id,
+    userName: `${agent.firstName} ${agent.lastName}`,
+    roleInHierarchy: "AGENT",
+    commissionAmount: agentCommission,
+    commissionLevel: agent.commissionLevel,
+    isOverride: false,
+  });
 
-  if (agent.commissionLevel === OWNER_LEVEL) {
-    // Owner selling personally - gets full 130%
-    agentCommission = baseCommission * (OWNER_LEVEL / 100);
-    splits.push({
-      userId: agent.id,
-      userName: `${agent.firstName} ${agent.lastName}`,
-      roleInHierarchy: "OWNER",
-      commissionAmount: agentCommission,
-      commissionLevel: OWNER_LEVEL,
-      isOverride: false,
-    });
-  } else if (agent.commissionLevel === MANAGER_LEVEL) {
-    // Manager selling personally - gets 110%, owner gets 20%
-    agentCommission = baseCommission * (MANAGER_LEVEL / 100);
-    splits.push({
-      userId: agent.id,
-      userName: `${agent.firstName} ${agent.lastName}`,
-      roleInHierarchy: "MANAGER",
-      commissionAmount: agentCommission,
-      commissionLevel: MANAGER_LEVEL,
-      isOverride: false,
-    });
+  // Calculate overrides for each upline member
+  let totalOverrides = 0;
+  let previousLevel = agent.commissionLevel;
 
-    if (owner && owner.id !== agent.id) {
-      ownerOverride = baseCommission * ((OWNER_LEVEL - MANAGER_LEVEL) / 100); // 20%
+  for (const upline of uplineChain) {
+    // Each upline gets the difference between their level and the previous level
+    const overridePercent = upline.commissionLevel - previousLevel;
+
+    if (overridePercent > 0) {
+      const overrideAmount = baseCommission * (overridePercent / 100);
+      totalOverrides += overrideAmount;
+
       splits.push({
-        userId: owner.id,
-        userName: `${owner.firstName} ${owner.lastName}`,
-        roleInHierarchy: "OWNER",
-        commissionAmount: ownerOverride,
-        commissionLevel: OWNER_LEVEL - MANAGER_LEVEL,
+        userId: upline.id,
+        userName: `${upline.firstName} ${upline.lastName}`,
+        roleInHierarchy: upline.role === "AO" ? "OWNER" : "MANAGER",
+        commissionAmount: overrideAmount,
+        commissionLevel: overridePercent,
         isOverride: true,
       });
-    }
-  } else {
-    // Regular agent (70%) - agent gets 70%, manager gets 40%, owner gets 20%
-    agentCommission = baseCommission * (AGENT_LEVEL / 100);
-    splits.push({
-      userId: agent.id,
-      userName: `${agent.firstName} ${agent.lastName}`,
-      roleInHierarchy: "AGENT",
-      commissionAmount: agentCommission,
-      commissionLevel: AGENT_LEVEL,
-      isOverride: false,
-    });
 
-    if (manager) {
-      managerOverride = baseCommission * ((MANAGER_LEVEL - AGENT_LEVEL) / 100); // 40%
-      splits.push({
-        userId: manager.id,
-        userName: `${manager.firstName} ${manager.lastName}`,
-        roleInHierarchy: "MANAGER",
-        commissionAmount: managerOverride,
-        commissionLevel: MANAGER_LEVEL - AGENT_LEVEL,
-        isOverride: true,
-      });
+      previousLevel = upline.commissionLevel;
     }
 
-    if (owner) {
-      // Owner gets 20% if there's a manager, or 60% if no manager (they get manager + owner override)
-      if (manager && manager.id !== owner.id) {
-        ownerOverride = baseCommission * ((OWNER_LEVEL - MANAGER_LEVEL) / 100); // 20%
-      } else if (!manager) {
-        // No manager, owner gets the manager's spread too
-        ownerOverride = baseCommission * ((OWNER_LEVEL - AGENT_LEVEL) / 100); // 60%
-      }
-
-      if (ownerOverride > 0) {
-        splits.push({
-          userId: owner.id,
-          userName: `${owner.firstName} ${owner.lastName}`,
-          roleInHierarchy: "OWNER",
-          commissionAmount: ownerOverride,
-          commissionLevel: manager ? OWNER_LEVEL - MANAGER_LEVEL : OWNER_LEVEL - AGENT_LEVEL,
-          isOverride: true,
-        });
-      }
-    }
+    // Stop if we've reached the top (AO level)
+    if (upline.commissionLevel >= AO_LEVEL) break;
   }
+
+  // Total pool is always 130% of base commission
+  const totalCommissionPool = baseCommission * (AO_LEVEL / 100);
 
   return {
     agentCommission,
-    managerOverride,
-    ownerOverride,
+    totalOverrides,
     totalCommissionPool,
     splits,
   };
+}
+
+/**
+ * Get the full upline chain for a user
+ */
+async function getUplineChain(userId: string): Promise<UplineUser[]> {
+  const chain: UplineUser[] = [];
+  let currentId: string | null = userId;
+  const visited = new Set<string>();
+
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+
+    const user: {
+      id: string;
+      first_name: string;
+      last_name: string;
+      commission_level: number;
+      role: string;
+      upline_id: string | null;
+    } | null = await prisma.users.findUnique({
+      where: { id: currentId },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        commission_level: true,
+        role: true,
+        upline_id: true,
+      },
+    });
+
+    if (!user) break;
+
+    // Don't include the original user in the upline chain
+    if (user.id !== userId) {
+      chain.push({
+        id: user.id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        commissionLevel: user.commission_level || 70,
+        role: user.role,
+        uplineId: user.upline_id,
+      });
+    }
+
+    currentId = user.upline_id;
+
+    // Stop if we've reached an AO
+    if (user.role === "AO") break;
+  }
+
+  return chain;
 }
 
 // GET - Fetch deals
@@ -243,8 +270,8 @@ export async function POST(request: Request) {
         first_name: true,
         last_name: true,
         commission_level: true,
-        manager_id: true,
-        agency_owner_id: true,
+        role: true,
+        upline_id: true,
       },
     });
 
@@ -252,23 +279,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    // Get manager if exists
-    let manager = null;
-    if (user.manager_id) {
-      manager = await prisma.users.findUnique({
-        where: { id: user.manager_id },
-        select: { id: true, first_name: true, last_name: true },
-      });
-    }
-
-    // Get agency owner if exists
-    let owner = null;
-    if (user.agency_owner_id) {
-      owner = await prisma.users.findUnique({
-        where: { id: user.agency_owner_id },
-        select: { id: true, first_name: true, last_name: true },
-      });
-    }
+    // Get full upline chain for commission splits
+    const uplineChain = await getUplineChain(session.user.id);
 
     // Get carrier FYC rate
     const carrier = await prisma.carriers.findFirst({
@@ -284,26 +296,29 @@ export async function POST(request: Request) {
     // Calculate base commission
     const baseCommission = validatedData.annualPremium * fycRate;
 
-    // Calculate commission splits
+    // Calculate commission splits using full upline hierarchy
     const commissionResult = calculateCommissionSplits(
       baseCommission,
       {
         id: user.id,
         firstName: user.first_name,
         lastName: user.last_name,
-        commissionLevel: user.commission_level || AGENT_LEVEL,
+        commissionLevel: user.commission_level || 70,
+        role: user.role,
+        uplineId: user.upline_id,
       },
-      manager ? {
-        id: manager.id,
-        firstName: manager.first_name,
-        lastName: manager.last_name,
-      } : null,
-      owner ? {
-        id: owner.id,
-        firstName: owner.first_name,
-        lastName: owner.last_name,
-      } : null
+      uplineChain
     );
+
+    // Calculate manager and owner overrides from splits for backward compatibility
+    const managerSplits = commissionResult.splits.filter(s => s.isOverride && s.roleInHierarchy === "MANAGER");
+    const ownerSplits = commissionResult.splits.filter(s => s.isOverride && s.roleInHierarchy === "OWNER");
+    const managerOverride = managerSplits.reduce((sum, s) => sum + s.commissionAmount, 0);
+    const ownerOverride = ownerSplits.reduce((sum, s) => sum + s.commissionAmount, 0);
+
+    // Get first upline as manager_id and find owner_id (AO) from chain
+    const directUpline = uplineChain[0];
+    const aoUpline = uplineChain.find(u => u.role === "AO");
 
     // Create deal with all commission data
     const dealId = crypto.randomUUID();
@@ -311,8 +326,8 @@ export async function POST(request: Request) {
       data: {
         id: dealId,
         agent_id: session.user.id,
-        manager_id: user.manager_id,
-        owner_id: user.agency_owner_id,
+        manager_id: directUpline?.id || null,
+        owner_id: aoUpline?.id || null,
         client_name: validatedData.clientName,
         client_age: validatedData.clientAge,
         client_state: validatedData.clientState,
@@ -327,11 +342,11 @@ export async function POST(request: Request) {
         annual_premium: validatedData.annualPremium,
         fyc_rate: fycRate,
         base_commission: baseCommission,
-        commission_rate: user.commission_level || AGENT_LEVEL,
+        commission_rate: user.commission_level || 70,
         commission_amount: commissionResult.agentCommission, // Legacy field
         agent_commission: commissionResult.agentCommission,
-        manager_override: commissionResult.managerOverride,
-        owner_override: commissionResult.ownerOverride,
+        manager_override: managerOverride,
+        owner_override: ownerOverride,
         total_commission_pool: commissionResult.totalCommissionPool,
         application_date: new Date(validatedData.applicationDate),
         notes: validatedData.notes,

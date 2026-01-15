@@ -312,7 +312,7 @@ export default function OnboardingPage() {
     return matchesSearch && matchesStatus && matchesTeam;
   });
 
-  const isAdmin = session?.user?.role === "ADMIN";
+  const isAdmin = ["AO", "PARTNER"].includes(session?.user?.role || "");
 
   return (
     <div className="p-6 space-y-6">
