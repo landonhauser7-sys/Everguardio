@@ -82,14 +82,14 @@ export async function sendDiscordSaleNotification(data: NotificationData): Promi
 
     // Build simple message
     const lines = [
-      `**${agentName}**${leadSourceText ? ` ${leadSourceText}` : ""}`,
-      `${deal.carrierName}${deal.policyType ? ` ${policyLabels[deal.policyType] || deal.policyType}` : ""}`,
-      `${formatCurrency(deal.annualPremium)} AP`,
+      `**${agentName}**`,
+      leadSourceText || "",
+      `${deal.carrierName}${deal.policyType ? ` ${policyLabels[deal.policyType] || deal.policyType}` : ""} ${formatCurrency(deal.annualPremium)} AP`,
       `${totalDealsToday} x OTD`,
-    ];
+    ].filter(line => line); // Remove empty lines
 
     const embed = {
-      title: "Deal Closed 💸🎉",
+      title: "SOLD 💸🎉",
       color: GREEN_COLOR,
       description: lines.join("\n"),
       timestamp: new Date().toISOString(),
