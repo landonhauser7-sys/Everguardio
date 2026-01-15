@@ -6,6 +6,7 @@ import { useSession } from "@/components/session-provider";
 import {
   LayoutDashboard,
   FileText,
+  FolderOpen,
   Trophy,
   Users,
   Settings,
@@ -25,7 +26,7 @@ import { cn } from "@/lib/utils";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Submit Deal", href: "/deals/new", icon: FileText },
-  { name: "My Deals", href: "/deals", icon: FileText },
+  { name: "My Deals", href: "/deals", icon: FolderOpen },
   { name: "Payouts", href: "/payouts", icon: Wallet },
   { name: "Calendar", href: "/calendar", icon: CalendarDays },
   { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
