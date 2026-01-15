@@ -41,6 +41,14 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface OverrideSplit {
+  userId: string;
+  userName: string;
+  role: string;
+  amount: number;
+  level: number;
+}
+
 interface Deal {
   id: string;
   clientName: string;
@@ -59,6 +67,10 @@ interface Deal {
   applicationDate: string;
   status: string;
   createdAt: string;
+  managerOverride: number | null;
+  ownerOverride: number | null;
+  myOverride: number | null;
+  overrideSplits: OverrideSplit[];
   agent: {
     id: string;
     firstName: string;
@@ -66,6 +78,7 @@ interface Deal {
     displayName: string | null;
     profilePhotoUrl: string | null;
     role: string;
+    commissionLevel: number;
   };
 }
 
@@ -198,6 +211,7 @@ export function DealsList() {
 
   const totalPremium = filteredDeals.reduce((sum, deal) => sum + deal.annualPremium, 0);
   const totalCommission = filteredDeals.reduce((sum, deal) => sum + deal.commissionAmount, 0);
+  const totalOverride = filteredDeals.reduce((sum, deal) => sum + (deal.myOverride || 0), 0);
 
   if (isLoading) {
     return (
@@ -240,7 +254,7 @@ export function DealsList() {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className={`grid gap-4 ${(scope === "team" || scope === "agent") ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Deals</CardDescription>
@@ -255,10 +269,18 @@ export function DealsList() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Commission</CardDescription>
+            <CardDescription>{scope === "team" || scope === "agent" ? "Agent Commissions" : "Total Commission"}</CardDescription>
             <CardTitle className="text-2xl text-primary">{formatCurrency(totalCommission)}</CardTitle>
           </CardHeader>
         </Card>
+        {(scope === "team" || scope === "agent") && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>My Override</CardDescription>
+              <CardTitle className="text-2xl text-emerald-600">{formatCurrency(totalOverride)}</CardTitle>
+            </CardHeader>
+          </Card>
+        )}
       </div>
 
       {/* Filters */}
@@ -352,7 +374,10 @@ export function DealsList() {
                 <TableHead>Carrier</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead className="text-right">Premium</TableHead>
-                <TableHead className="text-right">Commission</TableHead>
+                <TableHead className="text-right">Agent Commission</TableHead>
+                {(scope === "team" || scope === "agent") && (
+                  <TableHead className="text-right">My Override</TableHead>
+                )}
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -407,6 +432,11 @@ export function DealsList() {
                   <TableCell className="text-right font-medium text-primary">
                     {formatCurrency(deal.commissionAmount)}
                   </TableCell>
+                  {(scope === "team" || scope === "agent") && (
+                    <TableCell className="text-right font-medium text-emerald-600">
+                      {deal.myOverride ? formatCurrency(deal.myOverride) : "-"}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(deal.status)}>
                       {deal.status}
@@ -416,7 +446,7 @@ export function DealsList() {
               ))}
               {filteredDeals.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
+                  <TableCell colSpan={scope === "team" || scope === "agent" ? 11 : 8} className="text-center text-muted-foreground h-24">
                     No deals match your filters
                   </TableCell>
                 </TableRow>

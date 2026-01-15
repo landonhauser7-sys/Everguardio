@@ -246,6 +246,16 @@ export async function GET(request: Request) {
             commission_level: true,
           },
         },
+        commission_splits: {
+          select: {
+            user_id: true,
+            user_name: true,
+            role_in_hierarchy: true,
+            commission_amount: true,
+            commission_level: true,
+            is_override: true,
+          },
+        },
       },
     });
 
@@ -273,35 +283,59 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({
-      deals: deals.map(d => ({
-        id: d.id,
-        clientName: d.client_name,
-        clientAge: d.client_age,
-        clientState: d.client_state,
-        clientPhone: d.client_phone,
-        policyNumber: d.policy_number,
-        draftDate: d.draft_date,
-        leadSource: d.lead_source,
-        policyType: d.policy_type,
-        carrierName: d.carrier_name,
-        insuranceType: d.insurance_type,
-        faceAmount: d.face_amount ? Number(d.face_amount) : null,
-        annualPremium: Number(d.annual_premium),
-        commissionAmount: Number(d.agent_commission || d.commission_amount),
-        baseCommission: d.base_commission ? Number(d.base_commission) : null,
-        fycRate: d.fyc_rate,
-        applicationDate: d.application_date,
-        status: d.status,
-        createdAt: d.created_at,
-        agent: {
-          id: d.users_deals_agent_idTousers.id,
-          firstName: d.users_deals_agent_idTousers.first_name,
-          lastName: d.users_deals_agent_idTousers.last_name,
-          displayName: d.users_deals_agent_idTousers.display_name,
-          profilePhotoUrl: d.users_deals_agent_idTousers.profile_photo_url,
-          role: d.users_deals_agent_idTousers.role,
-        },
-      })),
+      deals: deals.map(d => {
+        // Find the current user's override from commission splits
+        const myOverride = d.commission_splits.find(
+          s => s.user_id === session.user.id && s.is_override
+        );
+
+        // Get all override splits for display
+        const overrideSplits = d.commission_splits
+          .filter(s => s.is_override)
+          .map(s => ({
+            userId: s.user_id,
+            userName: s.user_name,
+            role: s.role_in_hierarchy,
+            amount: Number(s.commission_amount),
+            level: s.commission_level,
+          }));
+
+        return {
+          id: d.id,
+          clientName: d.client_name,
+          clientAge: d.client_age,
+          clientState: d.client_state,
+          clientPhone: d.client_phone,
+          policyNumber: d.policy_number,
+          draftDate: d.draft_date,
+          leadSource: d.lead_source,
+          policyType: d.policy_type,
+          carrierName: d.carrier_name,
+          insuranceType: d.insurance_type,
+          faceAmount: d.face_amount ? Number(d.face_amount) : null,
+          annualPremium: Number(d.annual_premium),
+          commissionAmount: Number(d.agent_commission || d.commission_amount),
+          baseCommission: d.base_commission ? Number(d.base_commission) : null,
+          fycRate: d.fyc_rate,
+          applicationDate: d.application_date,
+          status: d.status,
+          createdAt: d.created_at,
+          // Override info
+          managerOverride: d.manager_override ? Number(d.manager_override) : null,
+          ownerOverride: d.owner_override ? Number(d.owner_override) : null,
+          myOverride: myOverride ? Number(myOverride.commission_amount) : null,
+          overrideSplits,
+          agent: {
+            id: d.users_deals_agent_idTousers.id,
+            firstName: d.users_deals_agent_idTousers.first_name,
+            lastName: d.users_deals_agent_idTousers.last_name,
+            displayName: d.users_deals_agent_idTousers.display_name,
+            profilePhotoUrl: d.users_deals_agent_idTousers.profile_photo_url,
+            role: d.users_deals_agent_idTousers.role,
+            commissionLevel: d.users_deals_agent_idTousers.commission_level,
+          },
+        };
+      }),
       total: deals.length,
       downlineMembers,
       isManager: currentUser?.is_manager || (currentUser?.commission_level && currentUser.commission_level >= 80),
