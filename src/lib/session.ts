@@ -26,13 +26,15 @@ const getCookieName = () => {
     : "next-auth.session-token";
 };
 
-// Decode session from token (plain base64 JSON)
+// Decode session from token (base64url encoded payload.signature format)
 export function decodeSession(token: string): SessionUser | null {
   try {
     // First decode URL encoding (handles %3D -> =, etc.)
     const decodedToken = decodeURIComponent(token);
-    // Decode base64 payload
-    const data = JSON.parse(Buffer.from(decodedToken, "base64").toString("utf-8"));
+    // Split by . to get payload (token format is payload.signature)
+    const payload = decodedToken.split(".")[0];
+    // Decode base64url payload
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf-8"));
 
     // Check expiration
     if (data.exp && data.exp < Date.now()) {
