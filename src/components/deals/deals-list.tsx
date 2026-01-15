@@ -214,7 +214,8 @@ export function DealsList() {
     );
   }
 
-  if (deals.length === 0) {
+  // Only show empty state if user has no deals AND is not a manager who can view team deals
+  if (deals.length === 0 && (!isManager || downlineMembers.length === 0)) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-16">
