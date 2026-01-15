@@ -89,7 +89,7 @@ export async function sendDiscordSaleNotification(data: NotificationData): Promi
     ].filter(line => line); // Remove empty lines
 
     const embed = {
-      title: "💸NEW SALE",
+      title: "💸 NEW SALE",
       color: GREEN_COLOR,
       description: lines.join("\n"),
       timestamp: new Date().toISOString(),
