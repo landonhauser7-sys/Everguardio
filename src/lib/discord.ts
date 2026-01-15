@@ -37,8 +37,10 @@ function formatCurrency(amount: number): string {
 export async function sendDiscordSaleNotification(data: NotificationData): Promise<void> {
   const webhookUrl = process.env.DISCORD_SALES_WEBHOOK_URL;
 
+  console.log('[Discord] Attempting to send notification, webhook configured:', !!webhookUrl);
+
   if (!webhookUrl) {
-    console.log('Discord webhook URL not configured, skipping notification');
+    console.log('[Discord] DISCORD_SALES_WEBHOOK_URL not configured, skipping notification');
     return;
   }
 
@@ -60,6 +62,7 @@ export async function sendDiscordSaleNotification(data: NotificationData): Promi
       timestamp: new Date().toISOString(),
     };
 
+    console.log('[Discord] Sending to webhook...');
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -67,9 +70,12 @@ export async function sendDiscordSaleNotification(data: NotificationData): Promi
     });
 
     if (!response.ok) {
-      console.error('Discord webhook failed:', response.status, await response.text());
+      const text = await response.text();
+      console.error('[Discord] Webhook failed:', response.status, text);
+    } else {
+      console.log('[Discord] Notification sent successfully');
     }
   } catch (error) {
-    console.error('Discord notification failed:', error);
+    console.error('[Discord] Notification error:', error);
   }
 }
