@@ -207,15 +207,20 @@ export async function GET(request: Request) {
       };
     }
 
-    // Production chart data - daily breakdown for last 30 days
+    // Production chart data - daily breakdown for selected date range
     const chartDeals = ["AO", "PARTNER"].includes(userRole || "") ? allDeals : personalDeals;
     const chartDataMap = new Map<string, { date: string; life: number; health: number }>();
 
-    // Initialize all days in the range
-    const now = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - i);
+    // Initialize all days in the selected range
+    const rangeStart = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const rangeEnd = endDate ? new Date(endDate) : new Date();
+
+    // Calculate number of days in range
+    const daysDiff = Math.ceil((rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24));
+
+    for (let i = 0; i <= daysDiff; i++) {
+      const date = new Date(rangeStart);
+      date.setDate(date.getDate() + i);
       const dateStr = date.toISOString().split('T')[0];
       chartDataMap.set(dateStr, { date: dateStr, life: 0, health: 0 });
     }
