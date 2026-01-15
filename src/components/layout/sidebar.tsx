@@ -55,14 +55,17 @@ const adminNavigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+
+  // Wait for session to load before checking permissions
+  const role = status === "authenticated" ? session?.user?.role : null;
 
   // Admin roles: AO, PARTNER (can see user management)
-  const isAdmin = ["AO", "PARTNER"].includes(session?.user?.role || "");
+  const isAdmin = ["AO", "PARTNER"].includes(role || "");
   // MGA and above (can see management section)
-  const isMGA = ["MGA", "PARTNER", "AO"].includes(session?.user?.role || "");
+  const isMGA = ["MGA", "PARTNER", "AO"].includes(role || "");
   // Manager roles: BA and above (can see team and hierarchy)
-  const isManager = ["BA", "SA", "GA", "MGA", "PARTNER", "AO"].includes(session?.user?.role || "");
+  const isManager = ["BA", "SA", "GA", "MGA", "PARTNER", "AO"].includes(role || "");
 
   return (
     <div className="flex h-full w-64 flex-col bg-card border-r">
