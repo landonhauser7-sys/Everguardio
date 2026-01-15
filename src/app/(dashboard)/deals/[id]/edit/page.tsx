@@ -24,6 +24,7 @@ interface Deal {
   faceAmount: number | null;
   annualPremium: number;
   applicationDate: string;
+  effectiveDate: string | null;
   status: string;
   notes: string | null;
 }
@@ -60,6 +61,7 @@ export default function EditDealPage() {
           faceAmount: data.deal.face_amount,
           annualPremium: data.deal.annual_premium,
           applicationDate: data.deal.application_date,
+          effectiveDate: data.deal.effective_date,
           status: data.deal.status,
           notes: data.deal.notes,
         });

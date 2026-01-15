@@ -86,6 +86,8 @@ model deals {
   commission_rate               Decimal             @db.Decimal(5, 2)
   commission_amount             Decimal             @db.Decimal(15, 2)
   application_date              DateTime            @db.Date
+  effective_date                DateTime?           @db.Date
+  deposit_date                  DateTime?           @db.Date
   issue_date                    DateTime?           @db.Date
   status                        DealStatus          @default(SUBMITTED)
   notes                         String?
@@ -111,6 +113,7 @@ model deals {
   points_earned                 Int                 @default(0)
   total_commission_pool         Decimal?            @db.Decimal(15, 2)
   commission_splits             commission_splits[]
+  payouts                       payouts[]
   users_deals_agent_idTousers   users               @relation("deals_agent_idTousers", fields: [agent_id], references: [id])
   users_deals_manager_idTousers users?              @relation("deals_manager_idTousers", fields: [manager_id], references: [id])
   users_deals_owner_idTousers   users?              @relation("deals_owner_idTousers", fields: [owner_id], references: [id])
@@ -120,6 +123,7 @@ model deals {
   @@index([created_at(sort: Desc)])
   @@index([manager_id])
   @@index([owner_id])
+  @@index([deposit_date])
 }
 
 model discord_settings {
@@ -270,6 +274,7 @@ model users {
   other_users_users_upline_idTousers       users[]               @relation("users_upline_idTousers")
   weekly_rankings                          weekly_rankings[]
   calendar_events                          calendar_events[]
+  payouts                                  payouts[]
 }
 
 model weekly_rankings {
@@ -416,4 +421,38 @@ enum CalendarEventType {
   ANNOUNCEMENT
   DEADLINE
   OTHER
+}
+
+enum PayoutStatus {
+  PENDING
+  DEPOSITED
+  PAID
+  CLAWBACK
+}
+
+enum PayoutType {
+  BASE_COMMISSION
+  OVERRIDE
+}
+
+model payouts {
+  id            String       @id
+  user_id       String
+  deal_id       String
+  amount        Decimal      @db.Decimal(15, 2)
+  type          PayoutType
+  deposit_date  DateTime     @db.Date
+  week_start    DateTime     @db.Date
+  week_end      DateTime     @db.Date
+  status        PayoutStatus @default(PENDING)
+  created_at    DateTime     @default(now())
+  updated_at    DateTime
+  users         users        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  deals         deals        @relation(fields: [deal_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([deal_id])
+  @@index([deposit_date])
+  @@index([week_start])
+  @@index([user_id, week_start])
 }

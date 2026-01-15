@@ -3,6 +3,7 @@ import { getServerSession, authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { sendDiscordSaleNotification } from "@/lib/discord";
+import { calculateDepositDate, getWeekBounds } from "@/lib/payout-utils";
 
 const dealSchema = z.object({
   clientName: z.string().min(1),
@@ -18,6 +19,7 @@ const dealSchema = z.object({
   faceAmount: z.number().optional(),
   annualPremium: z.number().min(0),
   applicationDate: z.string(),
+  effectiveDate: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -416,6 +418,14 @@ export async function POST(request: Request) {
     const directUpline = uplineChain[0];
     const aoUpline = uplineChain.find(u => u.role === "AO");
 
+    // Calculate effective and deposit dates
+    const effectiveDate = validatedData.effectiveDate
+      ? new Date(validatedData.effectiveDate)
+      : null;
+    const depositDate = effectiveDate
+      ? calculateDepositDate(effectiveDate)
+      : null;
+
     // Create deal with all commission data
     const dealId = crypto.randomUUID();
     const deal = await prisma.deals.create({
@@ -445,6 +455,8 @@ export async function POST(request: Request) {
         owner_override: ownerOverride,
         total_commission_pool: commissionResult.totalCommissionPool,
         application_date: new Date(validatedData.applicationDate),
+        effective_date: effectiveDate,
+        deposit_date: depositDate,
         notes: validatedData.notes,
         status: "SUBMITTED",
         updated_at: new Date(),
@@ -464,6 +476,28 @@ export async function POST(request: Request) {
           commission_level: split.commissionLevel,
           is_override: split.isOverride,
           created_at: new Date(),
+        })),
+      });
+    }
+
+    // Create payout records if we have a deposit date
+    if (depositDate) {
+      const { weekStart, weekEnd } = getWeekBounds(depositDate);
+      const now = new Date();
+
+      await prisma.payouts.createMany({
+        data: commissionResult.splits.map(split => ({
+          id: crypto.randomUUID(),
+          deal_id: dealId,
+          user_id: split.userId,
+          amount: split.commissionAmount,
+          type: split.isOverride ? "OVERRIDE" : "BASE_COMMISSION",
+          deposit_date: depositDate,
+          week_start: weekStart,
+          week_end: weekEnd,
+          status: "PENDING",
+          created_at: now,
+          updated_at: now,
         })),
       });
     }

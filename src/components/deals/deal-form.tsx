@@ -77,6 +77,7 @@ interface DealData {
   faceAmount: number | null;
   annualPremium: number;
   applicationDate: string;
+  effectiveDate: string | null;
   status: string;
   notes: string | null;
 }
@@ -106,6 +107,7 @@ export function DealForm({ deal, mode = "create" }: DealFormProps) {
     faceAmount: deal?.faceAmount?.toString() || "",
     annualPremium: deal?.annualPremium?.toString() || "",
     applicationDate: deal?.applicationDate ? deal.applicationDate.split("T")[0] : new Date().toISOString().split("T")[0],
+    effectiveDate: deal?.effectiveDate ? deal.effectiveDate.split("T")[0] : "",
     status: deal?.status || "SUBMITTED",
     notes: deal?.notes || "",
   });
@@ -323,7 +325,7 @@ export function DealForm({ deal, mode = "create" }: DealFormProps) {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="applicationDate">Application Date *</Label>
               <Input
@@ -333,6 +335,18 @@ export function DealForm({ deal, mode = "create" }: DealFormProps) {
                 onChange={(e) => setFormData({ ...formData, applicationDate: e.target.value })}
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="effectiveDate">Effective Date</Label>
+              <Input
+                id="effectiveDate"
+                type="date"
+                value={formData.effectiveDate}
+                onChange={(e) => setFormData({ ...formData, effectiveDate: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Deposit = Effective + 3 business days
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="draftDate">Draft Date</Label>
