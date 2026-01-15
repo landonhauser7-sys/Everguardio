@@ -384,23 +384,33 @@ enum UserStatus {
 }
 
 model calendar_events {
-  id              String        @id
+  id              String              @id
   title           String
   description     String?
   start           DateTime
   end             DateTime
   location        String?
-  type            CalendarEventType @default(OTHER)
-  all_day         Boolean       @default(false)
+  type            CalendarEventType   @default(OTHER)
+  visibility      EventVisibility     @default(AGENCY)
+  all_day         Boolean             @default(false)
   hangout_link    String?
-  google_event_id String?       @unique
+  google_event_id String?             @unique
   created_by_id   String?
-  created_at      DateTime      @default(now())
+  target_user_id  String?
+  created_at      DateTime            @default(now())
   updated_at      DateTime
-  users           users?        @relation(fields: [created_by_id], references: [id])
+  users           users?              @relation(fields: [created_by_id], references: [id])
 
   @@index([start, end])
   @@index([created_by_id])
+  @@index([target_user_id])
+  @@index([visibility])
+}
+
+enum EventVisibility {
+  PERSONAL
+  HIERARCHY
+  AGENCY
 }
 
 model calendar_config {

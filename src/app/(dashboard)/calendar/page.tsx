@@ -69,9 +69,12 @@ interface CalendarEvent {
   end: string;
   location?: string;
   type: "training" | "meeting" | "announcement" | "deadline" | "other";
+  visibility?: "personal" | "hierarchy" | "agency";
   hangoutLink?: string;
   attendees?: number;
   allDay?: boolean;
+  createdBy?: string;
+  isOwn?: boolean;
 }
 
 interface CalendarConfig {
@@ -79,6 +82,12 @@ interface CalendarConfig {
   calendarId?: string;
   lastSynced?: string;
 }
+
+const visibilityLabels: Record<string, string> = {
+  personal: "Personal",
+  hierarchy: "Team",
+  agency: "Agency",
+};
 
 const eventTypeColors: Record<string, { bg: string; text: string; border: string }> = {
   training: { bg: "bg-emerald-500/10", text: "text-emerald-600", border: "border-emerald-500" },
@@ -106,6 +115,7 @@ export default function CalendarPage() {
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isManager, setIsManager] = useState(false);
 
   const isAdmin = ["AO", "PARTNER"].includes(session?.user?.role || "");
 
@@ -121,6 +131,7 @@ export default function CalendarPage() {
         const data = await response.json();
         setEvents(data.events || []);
         setConfig(data.config || { connected: false });
+        setIsManager(data.isManager || false);
       }
     } catch (error) {
       console.error("Error fetching events:", error);
@@ -220,25 +231,25 @@ export default function CalendarPage() {
               Sync
             </Button>
           )}
-          {isAdmin && (
-            <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Event
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <AddEventForm
-                  onSuccess={() => {
-                    setIsAddEventOpen(false);
-                    fetchEvents();
-                  }}
-                  onCancel={() => setIsAddEventOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-          )}
+          <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Event
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <AddEventForm
+                isAdmin={isAdmin}
+                isManager={isManager}
+                onSuccess={() => {
+                  setIsAddEventOpen(false);
+                  fetchEvents();
+                }}
+                onCancel={() => setIsAddEventOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -495,6 +506,19 @@ function EventCard({
           {event.description}
         </p>
       )}
+      {(event.visibility && event.visibility !== "personal" || event.createdBy) && (
+        <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+          {event.visibility && event.visibility !== "personal" && (
+            <span className="flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              {visibilityLabels[event.visibility] || event.visibility}
+            </span>
+          )}
+          {event.createdBy && !event.isOwn && (
+            <span>by {event.createdBy}</span>
+          )}
+        </div>
+      )}
       {event.hangoutLink && (
         <a
           href={event.hangoutLink}
@@ -512,9 +536,13 @@ function EventCard({
 }
 
 function AddEventForm({
+  isAdmin,
+  isManager,
   onSuccess,
   onCancel,
 }: {
+  isAdmin: boolean;
+  isManager: boolean;
   onSuccess: () => void;
   onCancel: () => void;
 }) {
@@ -523,6 +551,7 @@ function AddEventForm({
     title: "",
     description: "",
     type: "meeting",
+    visibility: "personal",
     date: format(new Date(), "yyyy-MM-dd"),
     startTime: "09:00",
     endTime: "10:00",
@@ -549,6 +578,7 @@ function AddEventForm({
           title: formData.title,
           description: formData.description,
           type: formData.type,
+          visibility: formData.visibility,
           start,
           end,
           location: formData.location || undefined,
@@ -571,7 +601,7 @@ function AddEventForm({
       <DialogHeader>
         <DialogTitle>Add Event</DialogTitle>
         <DialogDescription>
-          Create a new event for the agency calendar
+          Create a new calendar event. Choose visibility to control who can see it.
         </DialogDescription>
       </DialogHeader>
 
@@ -608,15 +638,36 @@ function AddEventForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="date">Date *</Label>
-            <Input
-              id="date"
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              required
-            />
+            <Label htmlFor="visibility">Visibility</Label>
+            <Select
+              value={formData.visibility}
+              onValueChange={(value) => setFormData({ ...formData, visibility: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="personal">Personal (Only me)</SelectItem>
+                {isManager && (
+                  <SelectItem value="hierarchy">Team (My hierarchy)</SelectItem>
+                )}
+                {isAdmin && (
+                  <SelectItem value="agency">Agency (Everyone)</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="date">Date *</Label>
+          <Input
+            id="date"
+            type="date"
+            value={formData.date}
+            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            required
+          />
         </div>
 
         <div className="flex items-center gap-2">
