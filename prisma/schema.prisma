@@ -251,6 +251,7 @@ model users {
   weekly_deal_goal                         Int?                  @default(5)
   agency_owner_id                          String?
   commission_level                         Int                   @default(70)
+  is_manager                               Boolean               @default(false)
   announcements                            announcements[]
   commission_rates                         commission_rates[]
   commission_splits                        commission_splits[]

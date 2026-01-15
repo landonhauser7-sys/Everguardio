@@ -324,7 +324,7 @@ export default function LeaderboardPage() {
       )}
 
       {/* Top 3 Podium */}
-      {!isLoading && rankings.length >= 3 && (
+      {!isLoading && rankings.length >= 1 && (
         <Card className="overflow-hidden p-0">
           <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-6 py-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">

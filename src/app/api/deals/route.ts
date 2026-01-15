@@ -182,6 +182,23 @@ async function getUplineChain(userId: string): Promise<UplineUser[]> {
   return chain;
 }
 
+// Get all downline user IDs recursively
+async function getAllDownlineIds(userId: string): Promise<string[]> {
+  const directRecruits = await prisma.users.findMany({
+    where: { upline_id: userId, status: "ACTIVE" },
+    select: { id: true },
+  });
+
+  const allIds: string[] = directRecruits.map((r) => r.id);
+
+  for (const recruit of directRecruits) {
+    const subDownline = await getAllDownlineIds(recruit.id);
+    allIds.push(...subDownline);
+  }
+
+  return allIds;
+}
+
 // GET - Fetch deals
 export async function GET(request: Request) {
   try {
@@ -193,10 +210,27 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "50");
+    const scope = searchParams.get("scope") || "personal"; // personal, team, or specific agentId
+    const agentId = searchParams.get("agentId");
+
+    // Determine which agent IDs to fetch deals for
+    let agentIds: string[] = [session.user.id];
+
+    if (scope === "team") {
+      // Get all downline IDs
+      const downlineIds = await getAllDownlineIds(session.user.id);
+      agentIds = [session.user.id, ...downlineIds];
+    } else if (agentId && agentId !== session.user.id) {
+      // Verify the requested agent is in the user's downline
+      const downlineIds = await getAllDownlineIds(session.user.id);
+      if (downlineIds.includes(agentId)) {
+        agentIds = [agentId];
+      }
+    }
 
     const deals = await prisma.deals.findMany({
       where: {
-        agent_id: session.user.id,
+        agent_id: { in: agentIds },
       },
       orderBy: { created_at: "desc" },
       take: limit,
@@ -208,10 +242,35 @@ export async function GET(request: Request) {
             last_name: true,
             display_name: true,
             profile_photo_url: true,
+            role: true,
+            commission_level: true,
           },
         },
       },
     });
+
+    // Also fetch downline members for the filter dropdown (if user is a manager)
+    let downlineMembers: Array<{ id: string; name: string; role: string }> = [];
+    const currentUser = await prisma.users.findUnique({
+      where: { id: session.user.id },
+      select: { is_manager: true, commission_level: true },
+    });
+
+    if (currentUser?.is_manager || (currentUser?.commission_level && currentUser.commission_level >= 80)) {
+      const downlineIds = await getAllDownlineIds(session.user.id);
+      if (downlineIds.length > 0) {
+        const members = await prisma.users.findMany({
+          where: { id: { in: downlineIds } },
+          select: { id: true, first_name: true, last_name: true, role: true },
+          orderBy: { first_name: "asc" },
+        });
+        downlineMembers = members.map(m => ({
+          id: m.id,
+          name: `${m.first_name} ${m.last_name}`,
+          role: m.role,
+        }));
+      }
+    }
 
     return NextResponse.json({
       deals: deals.map(d => ({
@@ -240,9 +299,12 @@ export async function GET(request: Request) {
           lastName: d.users_deals_agent_idTousers.last_name,
           displayName: d.users_deals_agent_idTousers.display_name,
           profilePhotoUrl: d.users_deals_agent_idTousers.profile_photo_url,
+          role: d.users_deals_agent_idTousers.role,
         },
       })),
       total: deals.length,
+      downlineMembers,
+      isManager: currentUser?.is_manager || (currentUser?.commission_level && currentUser.commission_level >= 80),
     });
   } catch (error) {
     console.error("Error fetching deals:", error);

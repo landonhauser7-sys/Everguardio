@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
-import { Search, FileText, Plus, Calendar } from "lucide-react";
+import { Search, FileText, Plus, Calendar, Users, User } from "lucide-react";
 
 // Helper to parse date strings without timezone shifting
 function parseLocalDate(dateString: string): Date {
@@ -59,6 +59,20 @@ interface Deal {
   applicationDate: string;
   status: string;
   createdAt: string;
+  agent: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    displayName: string | null;
+    profilePhotoUrl: string | null;
+    role: string;
+  };
+}
+
+interface DownlineMember {
+  id: string;
+  name: string;
+  role: string;
 }
 
 const leadSourceLabels: Record<string, string> = {
@@ -117,23 +131,56 @@ export function DealsList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [insuranceFilter, setInsuranceFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [scope, setScope] = useState<string>("personal");
+  const [selectedAgentId, setSelectedAgentId] = useState<string>("all");
+  const [downlineMembers, setDownlineMembers] = useState<DownlineMember[]>([]);
+  const [isManager, setIsManager] = useState(false);
+
+  const fetchDeals = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      let url = "/api/deals?limit=100";
+      if (scope === "team") {
+        url += "&scope=team";
+      } else if (selectedAgentId !== "all") {
+        url += `&agentId=${selectedAgentId}`;
+      }
+
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setDeals(data.deals);
+        setDownlineMembers(data.downlineMembers || []);
+        setIsManager(data.isManager || false);
+      }
+    } catch (error) {
+      console.error("Error fetching deals:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [scope, selectedAgentId]);
 
   useEffect(() => {
-    async function fetchDeals() {
-      try {
-        const response = await fetch("/api/deals?limit=100");
-        if (response.ok) {
-          const data = await response.json();
-          setDeals(data.deals);
-        }
-      } catch (error) {
-        console.error("Error fetching deals:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
     fetchDeals();
-  }, []);
+  }, [fetchDeals]);
+
+  // Handle scope change
+  const handleScopeChange = (newScope: string) => {
+    setScope(newScope);
+    if (newScope === "personal" || newScope === "team") {
+      setSelectedAgentId("all");
+    }
+  };
+
+  // Handle agent selection
+  const handleAgentChange = (agentId: string) => {
+    setSelectedAgentId(agentId);
+    if (agentId !== "all") {
+      setScope("agent");
+    } else {
+      setScope("personal");
+    }
+  };
 
   const filteredDeals = deals.filter((deal) => {
     const matchesSearch =
@@ -216,39 +263,80 @@ export function DealsList() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by client or carrier..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Select value={insuranceFilter} onValueChange={setInsuranceFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="LIFE">Life</SelectItem>
-                  <SelectItem value="HEALTH">Health</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="SUBMITTED">Submitted</SelectItem>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="APPROVED">Approved</SelectItem>
-                  <SelectItem value="ISSUED">Issued</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex flex-col gap-4">
+            {/* Team/Agent Filter - Only show for managers */}
+            {isManager && downlineMembers.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                <Select value={scope === "team" ? "team" : scope === "agent" ? selectedAgentId : "personal"} onValueChange={(value) => {
+                  if (value === "personal") {
+                    handleScopeChange("personal");
+                  } else if (value === "team") {
+                    handleScopeChange("team");
+                  } else {
+                    handleAgentChange(value);
+                  }
+                }}>
+                  <SelectTrigger className="w-[200px]">
+                    <Users className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="View deals..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="personal">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        My Deals
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="team">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        All Team Deals
+                      </div>
+                    </SelectItem>
+                    {downlineMembers.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name} ({member.role})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by client or carrier..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Select value={insuranceFilter} onValueChange={setInsuranceFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="LIFE">Life</SelectItem>
+                    <SelectItem value="HEALTH">Health</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="APPROVED">Approved</SelectItem>
+                    <SelectItem value="ISSUED">Issued</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -257,6 +345,7 @@ export function DealsList() {
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
+                {(scope === "team" || scope === "agent") && <TableHead>Agent</TableHead>}
                 <TableHead>Client</TableHead>
                 <TableHead>Policy Info</TableHead>
                 <TableHead>Carrier</TableHead>
@@ -275,6 +364,14 @@ export function DealsList() {
                       {format(parseLocalDate(deal.applicationDate), "MMM d, yyyy")}
                     </div>
                   </TableCell>
+                  {(scope === "team" || scope === "agent") && (
+                    <TableCell>
+                      <div className="font-medium">
+                        {deal.agent.firstName} {deal.agent.lastName}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{deal.agent.role}</div>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <div>
                       <div className="font-medium">{deal.clientName}</div>
