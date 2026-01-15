@@ -81,15 +81,15 @@ export async function sendDiscordSaleNotification(data: NotificationData): Promi
     };
 
     // Build simple message
+    const policyTypeText = deal.policyType ? ` ${policyLabels[deal.policyType] || deal.policyType}` : "";
     const lines = [
-      `**${agentName}**`,
+      `**${agentName}** X ${totalDealsToday}`,
+      `${formatCurrency(deal.annualPremium)} AP ${deal.carrierName}${policyTypeText}`,
       leadSourceText || "",
-      `${deal.carrierName}${deal.policyType ? ` ${policyLabels[deal.policyType] || deal.policyType}` : ""} ${formatCurrency(deal.annualPremium)} AP`,
-      `${totalDealsToday} x OTD`,
     ].filter(line => line); // Remove empty lines
 
     const embed = {
-      title: "SOLD 💸🎉",
+      title: "💸NEW SALE",
       color: GREEN_COLOR,
       description: lines.join("\n"),
       timestamp: new Date().toISOString(),
