@@ -24,6 +24,7 @@ import {
   DateRangePreset,
   getPresetRange,
 } from "@/components/dashboard/date-range-filter";
+import { useSession } from "@/components/session-provider";
 
 interface CompanyTotals {
   totalCommissionPool: number;
@@ -131,11 +132,15 @@ function getLevelBadgeColor(level: number): string {
 }
 
 export default function CommissionsPage() {
+  const { data: session } = useSession();
   const [data, setData] = useState<CommissionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [datePreset, setDatePreset] = useState<DateRangePreset>("thisMonth");
   const [dateRange, setDateRange] = useState(() => getPresetRange("thisMonth"));
   const [agentSearch, setAgentSearch] = useState("");
+
+  // Only AO/Partner can see owner overrides
+  const canViewOwnerOverrides = ["AO", "PARTNER"].includes(session?.user?.role || "");
 
   const fetchCommissions = useCallback(async (range: { from: Date; to: Date }) => {
     setIsLoading(true);
@@ -284,28 +289,30 @@ export default function CommissionsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Owner Overrides</CardTitle>
-            <Building2 className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold font-mono text-purple-600">
-                  {formatCurrency(data?.companyTotals.ownerOverrides || 0)}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {data?.companyTotals.totalCommissionPool
-                    ? ((data.companyTotals.ownerOverrides / data.companyTotals.totalCommissionPool) * 100).toFixed(1)
-                    : 0}% of pool
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        {canViewOwnerOverrides && (
+          <Card className="border-l-4 border-l-purple-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Owner Overrides</CardTitle>
+              <Building2 className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold font-mono text-purple-600">
+                    {formatCurrency(data?.companyTotals.ownerOverrides || 0)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {data?.companyTotals.totalCommissionPool
+                      ? ((data.companyTotals.ownerOverrides / data.companyTotals.totalCommissionPool) * 100).toFixed(1)
+                      : 0}% of pool
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Agent Breakdown Table */}
@@ -422,87 +429,89 @@ export default function CommissionsPage() {
         </CardContent>
       </Card>
 
-      {/* Owner Override Breakdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-purple-600" />
-            Owner Override Breakdown
-          </CardTitle>
-          <CardDescription>
-            Override earnings by source
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-24 w-full" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg border bg-muted/30">
-                  <div className="text-sm text-muted-foreground mb-1">
-                    From Managers
-                  </div>
-                  <div className="text-2xl font-bold font-mono text-purple-600">
-                    {formatCurrency(data?.ownerBreakdown.fromManagers || 0)}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    BA through Partner sales
-                  </div>
-                </div>
-                <div className="p-4 rounded-lg border bg-muted/30">
-                  <div className="text-sm text-muted-foreground mb-1">
-                    From Agents
-                  </div>
-                  <div className="text-2xl font-bold font-mono text-purple-600">
-                    {formatCurrency(data?.ownerBreakdown.fromDirectAgents || 0)}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Prodigy production
-                  </div>
-                </div>
+      {/* Owner Override Breakdown - Only visible to AO/Partner */}
+      {canViewOwnerOverrides && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-purple-600" />
+              Owner Override Breakdown
+            </CardTitle>
+            <CardDescription>
+              Override earnings by source
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-24 w-full" />
               </div>
-
-              <div className="p-4 rounded-lg border-2 border-purple-200 bg-purple-50 dark:bg-purple-950/20">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-purple-800 dark:text-purple-300">
-                      Total Owner Overrides
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-lg border bg-muted/30">
+                    <div className="text-sm text-muted-foreground mb-1">
+                      From Managers
                     </div>
-                    <div className="text-xs text-purple-600 dark:text-purple-400">
-                      All override income
+                    <div className="text-2xl font-bold font-mono text-purple-600">
+                      {formatCurrency(data?.ownerBreakdown.fromManagers || 0)}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      BA through Partner sales
                     </div>
                   </div>
-                  <div className="text-3xl font-bold font-mono text-purple-700 dark:text-purple-300">
-                    {formatCurrency(data?.ownerBreakdown.totalOverrides || 0)}
+                  <div className="p-4 rounded-lg border bg-muted/30">
+                    <div className="text-sm text-muted-foreground mb-1">
+                      From Agents
+                    </div>
+                    <div className="text-2xl font-bold font-mono text-purple-600">
+                      {formatCurrency(data?.ownerBreakdown.fromDirectAgents || 0)}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Prodigy production
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Commission Flow Explanation */}
-              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                <div className="text-sm font-medium">7-Level Commission Hierarchy</div>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <div className="flex items-center gap-2">
-                    <ChevronRight className="h-3 w-3" />
-                    <span>Each level earns 10% override from the level below</span>
+                <div className="p-4 rounded-lg border-2 border-purple-200 bg-purple-50 dark:bg-purple-950/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-purple-800 dark:text-purple-300">
+                        Total Owner Overrides
+                      </div>
+                      <div className="text-xs text-purple-600 dark:text-purple-400">
+                        All override income
+                      </div>
+                    </div>
+                    <div className="text-3xl font-bold font-mono text-purple-700 dark:text-purple-300">
+                      {formatCurrency(data?.ownerBreakdown.totalOverrides || 0)}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <ChevronRight className="h-3 w-3" />
-                    <span>Prodigy 70% → BA 80% → SA 90% → GA 100%</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ChevronRight className="h-3 w-3" />
-                    <span>GA 100% → MGA 110% → Partner 120% → AO 130%</span>
+                </div>
+
+                {/* Commission Flow Explanation */}
+                <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                  <div className="text-sm font-medium">7-Level Commission Hierarchy</div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <div className="flex items-center gap-2">
+                      <ChevronRight className="h-3 w-3" />
+                      <span>Each level earns 10% override from the level below</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ChevronRight className="h-3 w-3" />
+                      <span>Prodigy 70% → BA 80% → SA 90% → GA 100%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ChevronRight className="h-3 w-3" />
+                      <span>GA 100% → MGA 110% → Partner 120% → AO 130%</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
