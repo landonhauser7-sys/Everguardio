@@ -139,8 +139,8 @@ export default function CommissionsPage() {
   const [dateRange, setDateRange] = useState(() => getPresetRange("thisMonth"));
   const [agentSearch, setAgentSearch] = useState("");
 
-  // Only AO/Partner can see owner overrides
-  const canViewOwnerOverrides = ["AO", "PARTNER"].includes(session?.user?.role || "");
+  // Only AO can see owner overrides
+  const canViewOwnerOverrides = session?.user?.role === "AO";
 
   const fetchCommissions = useCallback(async (range: { from: Date; to: Date }) => {
     setIsLoading(true);
