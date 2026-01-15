@@ -26,20 +26,20 @@ export async function POST() {
     await sendDiscordSaleNotification({
       deal: {
         id: "test-deal-123",
-        clientName: "Test Client",
-        annualPremium: 1000,
+        clientName: "John Smith",
+        annualPremium: 1850,
         insuranceType: "LIFE",
-        carrierName: "Ethos",
-        policyType: "TERM",
-        leadSource: "INBOUND",
+        carrierName: "American Amicable",
+        policyType: "FINAL_EXPENSE",
+        leadSource: "ASCENT_DIALER",
       },
       agent: {
         id: "test-agent",
-        firstName: "Landon",
-        lastName: "Hauser",
+        firstName: "Test",
+        lastName: "Test",
       },
-      totalAgentDeals: 10,
-      totalDealsToday: 3,
+      totalAgentDeals: 5,
+      totalDealsToday: 7,
     });
 
     return NextResponse.json({
