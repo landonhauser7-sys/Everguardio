@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Plus, Search, Users, Loader2, Pencil } from "lucide-react";
+import { Plus, Search, Users, Loader2, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,16 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -71,6 +81,8 @@ export default function UserManagementPage() {
 
   // Edit user state
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  // Delete user state
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({
     role: "",
     commissionLevel: 70,
@@ -204,6 +216,31 @@ export default function UserManagementPage() {
       fetchUsers();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update user");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDeleteUser() {
+    if (!deletingUser) return;
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(`/api/users/${deletingUser.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete user");
+      }
+
+      const result = await response.json();
+      toast.success(result.message || `${deletingUser.firstName} ${deletingUser.lastName} deleted`);
+      setDeletingUser(null);
+      fetchUsers();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete user");
     } finally {
       setIsSubmitting(false);
     }
@@ -507,6 +544,14 @@ export default function UserManagementPage() {
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeletingUser(user)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -679,6 +724,35 @@ export default function UserManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={!!deletingUser} onOpenChange={(open) => !open && setDeletingUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {deletingUser?.firstName} {deletingUser?.lastName}?
+              This action cannot be undone. If the user has deal history, they will be deactivated instead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
